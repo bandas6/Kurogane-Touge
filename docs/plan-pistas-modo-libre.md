@@ -149,8 +149,9 @@ E multipista ──► F Usuba ──► F Akane ──► F Myōseki ──► 
 
 Hay dos líneas que pueden avanzar a la vez después de E: pistas y modo libre. Si hay que elegir una, conviene **E → F Usuba → G → H1 → H3**: así hay pronto una pista nueva y el modo libre básico. Después se completa el resto.
 
-## Decisiones pendientes
+## Decisiones tomadas
 
-1. ¿Qué pistas y en qué orden? La propuesta es Usuba, Akane, Myōseki e Irozaka.
-2. ¿El modo libre incluye solo el pueblo o también la montaña, como mundo continuo? La propuesta es mundo continuo.
-3. ¿Reparto con dinero para comprar coches o mejoras? Sin decidir: sería un bloque nuevo de progresión.
+1. **Pistas y orden:** Usuba, Akane, Myōseki e Irozaka.
+2. **Modo libre:** mundo continuo, con el pueblo y la montaña unidos.
+3. **Orden de trabajo:** E → F Usuba → G → H1 → H3. Después, H2 y el resto de pistas.
+4. **Progresión con dinero (comprar coches o mejoras):** se deja para un bloque posterior. Por ahora los repartos solo dan puntos y récords.
