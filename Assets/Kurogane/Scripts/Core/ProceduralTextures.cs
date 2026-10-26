@@ -4,7 +4,7 @@ namespace Kurogane.Core
 {
     /// <summary>
     /// Texturas de baja resolución con filtrado de píxel, generadas por código (como en el prototipo web).
-    /// En la Fase 3 se sustituyen por texturas pintadas a mano.
+    /// Se pueden sustituir por texturas pintadas a mano cuando las haya.
     /// </summary>
     public static class ProceduralTextures
     {
@@ -31,6 +31,9 @@ namespace Kurogane.Core
             }
 
             public void Fill(Color32 c) => Rect(0, 0, w, h, c);
+
+            public void Set(int x, int y, Color32 c) { if (x >= 0 && x < w && y >= 0 && y < h) px[(h - 1 - y) * w + x] = c; }
+            public Color32 Get(int x, int y) => px[(h - 1 - y) * w + x];
 
             public void Blend(int x, int y, int rw, int rh, Color32 c, float a)
             {
@@ -139,6 +142,116 @@ namespace Kurogane.Core
             g.Rect(0, 15, 32, 1, H("#8a867c"));
             g.Rect(15, 0, 1, 32, H("#8a867c"));
             return g.ToTexture("TunnelPanel");
+        }
+
+        // ---------- Señales (Fase 3) ----------
+
+        // Fuente de píxel 3×5 para números y rótulos cortos
+        static readonly System.Collections.Generic.Dictionary<char, string> Glyphs = new System.Collections.Generic.Dictionary<char, string>
+        {
+            ['0'] = "111101101101111", ['1'] = "010110010010111", ['2'] = "111001111100111", ['3'] = "111001111001111",
+            ['4'] = "101101111001001", ['5'] = "111100111001111", ['6'] = "111100111101111", ['7'] = "111001010010010",
+            ['8'] = "111101111101111", ['9'] = "111101111001111", ['.'] = "000000000000010", [' '] = "000000000000000",
+            ['A'] = "010101111101101", ['E'] = "111100110100111", ['G'] = "111100101101111", ['K'] = "101101110101101",
+            ['M'] = "101111111101101", ['N'] = "110101101101101", ['O'] = "111101101101111", ['R'] = "110101110101101",
+            ['U'] = "101101101101111", ['T'] = "111010010010010", ['L'] = "100100100100111", ['I'] = "111010010010111",
+        };
+
+        /// <summary>Escribe <paramref name="text"/> centrado en (cx, y) con píxeles de tamaño <paramref name="scale"/>.</summary>
+        static void Text(Canvas g, string text, int cx, int y, int scale, Color32 c)
+        {
+            int width = text.Length * 4 * scale - scale;
+            int x = cx - width / 2;
+            foreach (char ch in text)
+            {
+                if (Glyphs.TryGetValue(char.ToUpperInvariant(ch), out var bits))
+                    for (int k = 0; k < 15; k++)
+                        if (bits[k] == '1') g.Rect(x + (k % 3) * scale, y + (k / 3) * scale, scale, scale, c);
+                x += 4 * scale;
+            }
+        }
+
+        static Canvas Mirror(Canvas g, bool mirror)
+        {
+            if (!mirror) return g;
+            var m = new Canvas(g.w, g.h);
+            for (int y = 0; y < g.h; y++)
+                for (int x = 0; x < g.w; x++) m.Set(x, y, g.Get(g.w - 1 - x, y));
+            return m;
+        }
+
+        /// <summary>Panel de chevrones para el exterior de las horquillas: flechas negras sobre amarillo hacia el giro.</summary>
+        public static Texture2D Chevron(bool left)
+        {
+            var g = new Canvas(16, 20);
+            g.Fill(H("#e8b81e"));
+            g.Rect(0, 0, 16, 1, H("#1a1a1a")); g.Rect(0, 19, 16, 1, H("#1a1a1a"));
+            g.Rect(0, 0, 1, 20, H("#1a1a1a")); g.Rect(15, 0, 1, 20, H("#1a1a1a"));
+            // flecha ">" de dos trazos
+            for (int y = 0; y < 8; y++)
+            {
+                g.Rect(4 + y, 2 + y, 3, 1, H("#141414"));
+                g.Rect(4 + y, 17 - y, 3, 1, H("#141414"));
+            }
+            return Mirror(g, left).ToTexture(left ? "ChevronIzq" : "ChevronDer", false);
+        }
+
+        /// <summary>Señal de peligro en rombo amarillo con una curva cerrada (horquilla) hacia el lado del giro.</summary>
+        public static Texture2D HairpinWarning(bool left)
+        {
+            var g = new Canvas(32, 32);
+            var yellow = H("#e8b81e");
+            var black = H("#151515");
+            for (int y = 0; y < 32; y++)
+            {
+                int half = y < 16 ? y : 31 - y;
+                g.Rect(15 - half, y, half * 2 + 2, 1, black);
+                if (half > 1) g.Rect(17 - half, y, half * 2 - 2, 1, yellow);
+            }
+            // horquilla: sube, gira 180° hacia la derecha y baja con punta de flecha
+            g.Rect(11, 11, 2, 12, black);
+            g.Rect(11, 9, 9, 2, black);
+            g.Rect(19, 9, 2, 9, black);
+            g.Rect(17, 17, 6, 2, black);
+            g.Rect(18, 19, 4, 1, black);
+            g.Rect(19, 20, 2, 1, black);
+            return Mirror(g, left).ToTexture(left ? "AvisoHorquillaIzq" : "AvisoHorquillaDer", false);
+        }
+
+        /// <summary>Límite de velocidad: número negro en círculo blanco con anillo rojo.</summary>
+        public static Texture2D SpeedLimit(int kmh)
+        {
+            var g = new Canvas(32, 32);
+            g.Fill(new Color32(0, 0, 0, 0));
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                {
+                    float d = Mathf.Sqrt((x - 15.5f) * (x - 15.5f) + (y - 15.5f) * (y - 15.5f));
+                    if (d < 15.5f) g.Set(x, y, d > 11.5f ? H("#c41e24") : H("#f2f2ee"));
+                }
+            Text(g, kmh.ToString(), 16, 11, 2, H("#1c2a6e"));
+            return g.ToTexture("Limite" + kmh, false);
+        }
+
+        /// <summary>Poste kilométrico: distancia desde la salida en km, negro sobre blanco.</summary>
+        public static Texture2D KmPost(string km)
+        {
+            var g = new Canvas(16, 24);
+            g.Fill(H("#efefea"));
+            g.Rect(0, 0, 16, 4, H("#2b5a2e"));
+            Text(g, km, 8, 9, 1, H("#1a1a1a"));
+            return g.ToTexture("Km" + km, false);
+        }
+
+        /// <summary>Rótulo de la boca del túnel: letras blancas sobre verde.</summary>
+        public static Texture2D TunnelPlate(string name)
+        {
+            var g = new Canvas(name.Length * 4 + 5, 11);
+            g.Fill(H("#1f5a3a"));
+            g.Rect(0, 0, g.w, 1, H("#e6e6e0")); g.Rect(0, 10, g.w, 1, H("#e6e6e0"));
+            g.Rect(0, 0, 1, 11, H("#e6e6e0")); g.Rect(g.w - 1, 0, 1, 11, H("#e6e6e0"));
+            Text(g, name, g.w / 2 + 1, 3, 1, H("#f0f0ea"));
+            return g.ToTexture("Tunel" + name, false);
         }
 
         /// <summary>Rejilla de la canaleta (溝) del interior de las horquillas.</summary>

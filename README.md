@@ -71,6 +71,15 @@ Al llegar a meta la bajada recibe una nota sobre 100:
 
 Si la escena se creó antes de la Fase 4, ejecuta otra vez **Kurogane → Crear escena de prueba** para añadir el filtro, el sonido y la música.
 
+### Ambiente y horneado
+
+- **Señales** (por código, en pixel art): chevrones en el exterior de cada horquilla, aviso de curva cerrada 70 m antes, límite de 40 en la salida y al salir del túnel, postes kilométricos cada 500 m y rótulo sobre la boca del túnel. Brillan un poco, como el retrorreflectante con los faros.
+- **Público** en las explanadas de las horquillas y junto a la salida, con flashes de cámara (`CrowdFlashes`). Cantidades en **TrackBuilder → Ambiente**.
+- **Kurogane → Hornear pista** guarda la geometría en la escena y sus mallas, texturas y materiales en `Assets/Kurogane/Baked`. Al pulsar Play ya no se genera nada y los materiales entran en la build sin depender de `Shader.Find`.
+- **Kurogane → Hornear luces (lightmaps)** (después de hornear la pista) pasa los faroles y las luces del túnel a lightmaps y añade sondas de luz para los coches. En ejecución esas luces ya no cuestan nada; los faros de los coches y la luna siguen en tiempo real. Tarda unos minutos.
+- **Kurogane → Quitar horneado** vuelve a la pista generada al arrancar. Si cambias el trazado o los ajustes de `TrackBuilder`, vuelve a hornear.
+- Lo horneado se sube con Git LFS (ver `.gitattributes`).
+
 ### Rendimiento
 
 - La pista se construye en tramos de 80 m, y los árboles, postes y faroles se agrupan en celdas de 60 m, para que Unity descarte lo que no está en cámara.
@@ -86,7 +95,7 @@ Si la escena se creó antes de la Fase 4, ejecuta otra vez **Kurogane → Crear 
 ```
 Assets/Kurogane/
   Scripts/
-    Track/    TrackDefinition (trazado editable), TrackData (cálculo de la pista y el terreno), TrackBuilder (mallas)
+    Track/    TrackDefinition (trazado editable), TrackData (cálculo de la pista y el terreno), TrackBuilder (mallas, señales y público), CrowdFlashes
     Cars/     CarSpec, CarController (física arcade), RivalAI, CarModelBuilder, CarVisual
     Camera/   ChaseCamera (persecución y cámara de garaje)
     Race/     RaceManager (cuenta atrás, puntos, vaso, sectores, récords),
@@ -98,7 +107,8 @@ Assets/Kurogane/
     Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer
   Shaders/    PS2Filter.shader
   Audio/      Musica/ (pistas propias, ver LEEME.txt)
-  Editor/     Menú "Kurogane": crear escena (KuroganeSceneSetup) y compilar (KuroganeBuild)
+  Editor/     Menú "Kurogane": crear escena (KuroganeSceneSetup), hornear (KuroganeBake) y compilar (KuroganeBuild)
+  Baked/      Pista horneada e iluminación (los genera el menú)
   Data/       Assets de pista y coches (los genera el menú)
   Scenes/     Escenas
 ```
@@ -112,11 +122,11 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | 0 | Proyecto, repositorio, LFS, paquetes | ✅ |
 | 1 | Pista generada, física del coche, cámara, rival, flujo de carrera, HUD provisional | ✅ |
 | 2 | Pulido del juego: menú de coche y opciones, caja manual en pantalla, nota final S–C | ✅ |
-| 3 | Arte: coches modelados en Blender, texturas a mano, público, señales, lightmaps, mallas horneadas | ⏳ |
+| 3 | Arte: coches modelados en Blender, texturas a mano, público, señales, lightmaps, mallas horneadas | 🧪 en prueba: público, señales, lightmaps y horneado hechos por código; faltan los coches de Blender y las texturas a mano |
 | 4 | Filtro PS2 (estela entre cuadros, brillo, tramado, color de 16 bits) y audio (motor por coche, turbo, eurobeat) | ✅ (la música la pones tú) |
 | 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | ✅ |
 | 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | ✅ (falta medir en un Android real) |
-| 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | 🧪 en prueba |
+| 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | ✅ |
 
 ## Compilar
 

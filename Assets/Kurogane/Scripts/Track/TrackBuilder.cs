@@ -12,9 +12,11 @@ namespace Kurogane.Track
     /// fuera de cámara; postes y luces se apagan por distancia con <see cref="DetailCulling"/>.
     /// </summary>
     [DefaultExecutionOrder(-100)]
-    public class TrackBuilder : MonoBehaviour
+    public partial class TrackBuilder : MonoBehaviour
     {
         public TrackDefinition definition;
+        [Tooltip("La geometría ya está horneada en la escena (Kurogane > Hornear pista): al arrancar solo se calcula la pista.")]
+        public bool baked;
         [Tooltip("Semilla para la posición de árboles.")]
         public int seed = 86;
         [Range(0, 1200)] public int treeCount = 760;
@@ -37,16 +39,34 @@ namespace Kurogane.Track
 
         void Awake() => Build();
 
+        const string RootName = "Generated";
+
+        /// <summary>Raíz de la geometría generada (o horneada).</summary>
+        public Transform Root => root;
+
         public void Build()
         {
             if (Data != null) return;
             if (definition == null) definition = ScriptableObject.CreateInstance<TrackDefinition>();
             Data = new TrackData(definition);
-            rng = new System.Random(seed);
-            root = new GameObject("Generated").transform;
-            root.SetParent(transform, false);
             culling = GetComponent<DetailCulling>();
             if (culling == null) culling = gameObject.AddComponent<DetailCulling>();
+
+            var existing = transform.Find(RootName);
+            if (baked && existing != null)
+            {
+                root = existing;
+                RegisterBakedDetail();
+                return;
+            }
+            if (existing != null)
+            {
+                if (Application.isPlaying) Destroy(existing.gameObject); else DestroyImmediate(existing.gameObject);
+            }
+
+            rng = new System.Random(seed);
+            root = new GameObject(RootName).transform;
+            root.SetParent(transform, false);
 
             var d = Data;
             float W = d.W;
@@ -99,6 +119,42 @@ namespace Kurogane.Track
             BuildForest();
             BuildBanner(8, new Color(0.72f, 0.07f, 0.16f));
             BuildBanner(d.N - 4, new Color(0.11f, 0.16f, 0.5f));
+            BuildSigns();
+            BuildCrowd();
+        }
+
+        /// <summary>Vuelve a generar la geometría desde cero (lo usa el horneado en el editor).</summary>
+        public void Rebuild()
+        {
+            Data = null;
+            baked = false;
+            Build();
+        }
+
+        /// <summary>
+        /// Con la pista horneada, los objetos ya existen: solo se registran en el descarte por distancia, por nombre.
+        /// Las luces horneadas en lightmaps no cuestan en ejecución, así que esas no se tocan.
+        /// </summary>
+        void RegisterBakedDetail()
+        {
+            foreach (var mr in root.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                switch (mr.gameObject.name)
+                {
+                    case "Posts": case "Reflectors": case "CatEyes": case "Chevrons": case "WarningSigns":
+                    case "SpeedSigns": case "SignBacks": case "SignPoles": case "KmPost":
+                        culling.Add(mr, detailDistance);
+                        break;
+                    case "Crowd":
+                        culling.Add(mr, detailDistance * 1.3f);
+                        break;
+                }
+            }
+            foreach (var l in root.GetComponentsInChildren<Light>(true))
+            {
+                var o = l.bakingOutput;
+                if (!(o.isBaked && o.lightmapBakeType == LightmapBakeType.Baked)) culling.Add(l, lightDistance);
+            }
         }
 
         System.Func<int, (Vector3, Vector3, float, float, float)> SideStrip(int s, int ra, int rb, float uScale, float vScale)

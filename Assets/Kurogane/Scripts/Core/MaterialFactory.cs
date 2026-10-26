@@ -58,6 +58,27 @@ namespace Kurogane.Core
             return m;
         }
 
+        /// <summary>
+        /// Señal de tráfico: la textura también como emisión tenue, para imitar el retrorreflectante que brilla con
+        /// los faros. Con <paramref name="cutout"/> recorta por alfa (señales redondas o en rombo).
+        /// </summary>
+        public static Material Sign(Texture2D tex, bool cutout = false, float glow = 0.35f)
+        {
+            var m = Lit(Color.white, tex, 0.3f);
+            m.EnableKeyword("_EMISSION");
+            m.SetTexture("_EmissionMap", tex);
+            m.SetColor("_EmissionColor", Color.white * glow);
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            if (cutout)
+            {
+                m.SetFloat("_AlphaClip", 1);
+                m.SetFloat("_Cutoff", 0.5f);
+                m.EnableKeyword("_ALPHATEST_ON");
+                m.renderQueue = (int)RenderQueue.AlphaTest;
+            }
+            return m;
+        }
+
         /// <summary>Dibuja ambas caras (solo URP; en el pipeline integrado se ignora).</summary>
         public static Material DoubleSided(this Material m)
         {
