@@ -5,18 +5,24 @@ namespace Kurogane.CameraRig
 {
     public enum ChaseMode { Persecucion, Lejana, Capo }
 
-    /// <summary>Cámara de persecución que gira con el derrape, como en el prototipo web.</summary>
+    /// <summary>Cámara de persecución que gira con el derrape, como en el prototipo web. En el menú hace de cámara de garaje.</summary>
     [RequireComponent(typeof(Camera))]
     public class ChaseCamera : MonoBehaviour
     {
         public CarController target;
         public ChaseMode mode = ChaseMode.Persecucion;
         public float baseFov = 60;
+        [Tooltip("Garaje: la cámara gira despacio alrededor del coche parado (menú).")]
+        public bool showroom;
 
         Camera cam;
         float camHeading;
         Vector3 camPos;
         float shake;
+        float orbitAngle = 2.4f;
+
+        /// <summary>Gira la cámara del garaje (arrastre del ratón o del dedo, en píxeles).</summary>
+        public void Orbit(float pixels) => orbitAngle += pixels * 0.006f;
 
         void Awake() => cam = GetComponent<Camera>();
 
@@ -41,6 +47,16 @@ namespace Kurogane.CameraRig
             float h = target.Heading, sp = target.Speed;
             var fwd = new Vector3(Mathf.Sin(h), 0, Mathf.Cos(h));
             Vector3 look;
+            if (showroom)
+            {
+                orbitAngle += Time.unscaledDeltaTime * 0.18f;
+                float a = h + orbitAngle;
+                camPos = car + new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a)) * 5.6f + Vector3.up * 1.5f;
+                camHeading = h;
+                transform.SetPositionAndRotation(camPos, Quaternion.LookRotation(car + Vector3.up * 0.55f - camPos));
+                cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, 42, 0.1f);
+                return;
+            }
             if (mode == ChaseMode.Capo)
             {
                 camPos = car + fwd * 0.9f + Vector3.up * 1.12f;

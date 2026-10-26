@@ -39,9 +39,15 @@ Los materiales generados por código detectan solos si URP está activo.
 | Volver a la pista | R | Y / Triángulo |
 | Pausa | Esc / P | Start |
 | Otra bajada / cambiar coche / menú (al terminar) | Enter / Tab / Esc | A / Select / Start |
-| Moverse por los menús | ↑ ↓ ← → / W A S D, Enter | Cruceta, A |
+| Moverse por los menús | ↑ ↓ ← → / W A S D, Enter, Esc | Cruceta, A, Start |
 
-Al pulsar Play aparece el **menú de coche y opciones**: coche, modo (Batalla o Contrarreloj), dificultad del rival, caja (automática o manual), unidades de velocidad, filtro PS2 y volúmenes de sonido y música. Lo elegido se guarda entre sesiones. Los menús también funcionan con el ratón, y en la caja manual los botones ▼ / ▲ de la pantalla cambian de marcha. Para saltarte el menú, desactiva **RaceManager → Show Menu On Start** y se usan los valores del inspector.
+Al pulsar Play aparece el **garaje**: la cámara gira alrededor del coche (arrástrala con el ratón o el dedo) y a la izquierda está el menú. La página principal elige coche, modo (Batalla o Contrarreloj), dificultad del rival y caja (automática o manual). **Opciones** abre la segunda página: unidades de velocidad, filtro PS2, volúmenes de sonido y música, controles táctiles y, en PC, resolución, pantalla completa o ventana, VSync y calidad. Lo elegido se guarda entre sesiones. Para saltarte el menú, desactiva **RaceManager → Show Menu On Start** y se usan los valores del inspector.
+
+Toda la interfaz es uGUI generada por código (`Kurogane.Hud`) y funciona con teclado, mando, ratón y pantalla táctil.
+
+### Controles táctiles
+
+Salen solos en móviles y pantallas táctiles (opción **Táctil**: Auto, Sí o No). Volante ◀ ▶ abajo a la izquierda; gas, freno y freno de mano abajo a la derecha; arriba, volver a la pista, pausa y cámara. Con la caja manual, las marchas se cambian con los botones ▼ / ▲ de la caja del HUD, que con los controles táctiles sube a la esquina superior derecha. En Android el juego se fija a 60 fps.
 
 ### Nota final
 
@@ -72,10 +78,11 @@ Assets/Kurogane/
   Scripts/
     Track/    TrackDefinition (trazado editable), TrackData (cálculo de la pista y el terreno), TrackBuilder (mallas)
     Cars/     CarSpec, CarController (física arcade), RivalAI, CarModelBuilder, CarVisual
-    Camera/   ChaseCamera
-    Race/     RaceManager (cuenta atrás, puntos, vaso, sectores, récords, HUD provisional),
-              RaceManager.Menu (menú, pausa, caja en pantalla, nota final), RaceSettings (opciones guardadas)
-    Controls/ DriverInput (teclado y mando; táctil en la Fase 5)
+    Camera/   ChaseCamera (persecución y cámara de garaje)
+    Race/     RaceManager (cuenta atrás, puntos, vaso, sectores, récords),
+              RaceManager.Menu (menú, opciones, pausa, nota final), RaceSettings (opciones guardadas)
+    Hud/      HudView (HUD y caja de cambios), MenuView (menús, pausa, resultados), TouchControls, UiKit
+    Controls/ DriverInput (teclado, mando y táctil)
     Core/     MaterialFactory, ProceduralTextures, MeshKit
     Retro/    PS2Filter (imagen a baja resolución, estela, brillo, tramado, 16 bits)
     Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer
@@ -96,8 +103,8 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | 1 | Pista generada, física del coche, cámara, rival, flujo de carrera, HUD provisional | ✅ |
 | 2 | Pulido del juego: menú de coche y opciones, caja manual en pantalla, nota final S–C | ✅ |
 | 3 | Arte: coches modelados en Blender, texturas a mano, público, señales, lightmaps, mallas horneadas | ⏳ |
-| 4 | Filtro PS2 (estela entre cuadros, brillo, tramado, color de 16 bits) y audio (motor por coche, turbo, eurobeat) | 🧪 en prueba (la música la pones tú) |
-| 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | ⏳ |
+| 4 | Filtro PS2 (estela entre cuadros, brillo, tramado, color de 16 bits) y audio (motor por coche, turbo, eurobeat) | ✅ (la música la pones tú) |
+| 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | 🧪 en prueba |
 | 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | ⏳ |
 | 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | ⏳ |
 

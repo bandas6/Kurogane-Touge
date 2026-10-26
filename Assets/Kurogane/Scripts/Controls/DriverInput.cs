@@ -8,15 +8,24 @@ namespace Kurogane.Controls
     /// <summary>
     /// Lectura de controles: teclado y mando. Funciona con el Input System nuevo o con el antiguo,
     /// según lo que esté activo en Project Settings > Player > Active Input Handling.
-    /// Los controles táctiles llegan en la Fase 5 escribiendo en <see cref="Touch"/>.
+    /// Los controles táctiles escriben en <see cref="Touch"/>.
     /// </summary>
     public static class DriverInput
     {
-        /// <summary>Valores que escriben los botones táctiles en pantalla (Fase 5).</summary>
+        /// <summary>Valores que escriben los botones táctiles en pantalla (Kurogane.Hud.TouchControls).</summary>
         public static class Touch
         {
             public static float gas, brake, steer;
             public static bool hand;
+            /// <summary>Pulsaciones sueltas: se quedan activas hasta que alguien las lee.</summary>
+            public static bool pause, camera, respawn, shiftUp, shiftDown;
+
+            internal static bool Take(ref bool flag)
+            {
+                bool v = flag;
+                flag = false;
+                return v;
+            }
         }
 
         public static float Gas
@@ -105,11 +114,11 @@ namespace Kurogane.Controls
             var g = Gamepad.current;
             return g != null && pad != null && pad(g).wasPressedThisFrame;
         }
-        public static bool ShiftUp => Pressed(Key.E, g => g.rightShoulder);
-        public static bool ShiftDown => Pressed(Key.Q, g => g.leftShoulder);
-        public static bool Respawn => Pressed(Key.R, g => g.buttonNorth);
-        public static bool CycleCamera => Pressed(Key.C, g => g.buttonWest);
-        public static bool Pause => Pressed(Key.Escape, g => g.startButton) || Pressed(Key.P);
+        public static bool ShiftUp => Touch.Take(ref Touch.shiftUp) || Pressed(Key.E, g => g.rightShoulder);
+        public static bool ShiftDown => Touch.Take(ref Touch.shiftDown) || Pressed(Key.Q, g => g.leftShoulder);
+        public static bool Respawn => Touch.Take(ref Touch.respawn) || Pressed(Key.R, g => g.buttonNorth);
+        public static bool CycleCamera => Touch.Take(ref Touch.camera) || Pressed(Key.C, g => g.buttonWest);
+        public static bool Pause => Touch.Take(ref Touch.pause) || Pressed(Key.Escape, g => g.startButton) || Pressed(Key.P);
         public static bool Confirm => Pressed(Key.Enter, g => g.buttonSouth);
         public static bool NextCar => Pressed(Key.Tab, g => g.selectButton);
         public static bool MenuUp => Pressed(Key.UpArrow, g => g.dpad.up) || Pressed(Key.W);
@@ -117,11 +126,11 @@ namespace Kurogane.Controls
         public static bool MenuLeft => Pressed(Key.LeftArrow, g => g.dpad.left) || Pressed(Key.A);
         public static bool MenuRight => Pressed(Key.RightArrow, g => g.dpad.right) || Pressed(Key.D);
 #elif ENABLE_LEGACY_INPUT_MANAGER
-        public static bool ShiftUp => UnityEngine.Input.GetKeyDown(KeyCode.E);
-        public static bool ShiftDown => UnityEngine.Input.GetKeyDown(KeyCode.Q);
-        public static bool Respawn => UnityEngine.Input.GetKeyDown(KeyCode.R);
-        public static bool CycleCamera => UnityEngine.Input.GetKeyDown(KeyCode.C);
-        public static bool Pause => UnityEngine.Input.GetKeyDown(KeyCode.Escape) || UnityEngine.Input.GetKeyDown(KeyCode.P);
+        public static bool ShiftUp => Touch.Take(ref Touch.shiftUp) || UnityEngine.Input.GetKeyDown(KeyCode.E);
+        public static bool ShiftDown => Touch.Take(ref Touch.shiftDown) || UnityEngine.Input.GetKeyDown(KeyCode.Q);
+        public static bool Respawn => Touch.Take(ref Touch.respawn) || UnityEngine.Input.GetKeyDown(KeyCode.R);
+        public static bool CycleCamera => Touch.Take(ref Touch.camera) || UnityEngine.Input.GetKeyDown(KeyCode.C);
+        public static bool Pause => Touch.Take(ref Touch.pause) || UnityEngine.Input.GetKeyDown(KeyCode.Escape) || UnityEngine.Input.GetKeyDown(KeyCode.P);
         public static bool Confirm => UnityEngine.Input.GetKeyDown(KeyCode.Return);
         public static bool NextCar => UnityEngine.Input.GetKeyDown(KeyCode.Tab);
         public static bool MenuUp => UnityEngine.Input.GetKeyDown(KeyCode.UpArrow) || UnityEngine.Input.GetKeyDown(KeyCode.W);
@@ -129,11 +138,11 @@ namespace Kurogane.Controls
         public static bool MenuLeft => UnityEngine.Input.GetKeyDown(KeyCode.LeftArrow) || UnityEngine.Input.GetKeyDown(KeyCode.A);
         public static bool MenuRight => UnityEngine.Input.GetKeyDown(KeyCode.RightArrow) || UnityEngine.Input.GetKeyDown(KeyCode.D);
 #else
-        public static bool ShiftUp => false;
-        public static bool ShiftDown => false;
-        public static bool Respawn => false;
-        public static bool CycleCamera => false;
-        public static bool Pause => false;
+        public static bool ShiftUp => Touch.Take(ref Touch.shiftUp);
+        public static bool ShiftDown => Touch.Take(ref Touch.shiftDown);
+        public static bool Respawn => Touch.Take(ref Touch.respawn);
+        public static bool CycleCamera => Touch.Take(ref Touch.camera);
+        public static bool Pause => Touch.Take(ref Touch.pause);
         public static bool Confirm => false;
         public static bool NextCar => false;
         public static bool MenuUp => false;

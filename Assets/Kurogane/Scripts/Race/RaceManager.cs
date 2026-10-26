@@ -3,6 +3,7 @@ using System.IO;
 using Kurogane.CameraRig;
 using Kurogane.Cars;
 using Kurogane.Controls;
+using Kurogane.Hud;
 using Kurogane.Retro;
 using Kurogane.Sound;
 using Kurogane.Track;
@@ -15,8 +16,8 @@ namespace Kurogane.Race
 
     /// <summary>
     /// Flujo de la bajada: cuenta atrás, cronómetro, vaso de agua, puntos de drift, canaleta, sectores,
-    /// llegada y récords. El HUD de la Fase 1 es IMGUI provisional; la interfaz definitiva llega en la Fase 5.
-    /// El menú, la pausa, la caja en pantalla y la nota final están en RaceManager.Menu.cs.
+    /// llegada y récords. La lógica del menú, la pausa, las opciones y la nota final está en RaceManager.Menu.cs;
+    /// la interfaz que lo dibuja está en Kurogane.Hud (HudView, MenuView y TouchControls), que se añaden solas.
     /// </summary>
     public partial class RaceManager : MonoBehaviour
     {
@@ -71,7 +72,7 @@ namespace Kurogane.Race
             public List<float> splits = new List<float>();
         }
 
-        CarSpec PlayerSpec => cars[Mathf.Clamp(selectedCar, 0, cars.Length - 1)];
+        public CarSpec PlayerSpec => cars[Mathf.Clamp(selectedCar, 0, cars.Length - 1)];
         CarSpec RivalSpec
         {
             get
@@ -87,9 +88,18 @@ namespace Kurogane.Race
             if (cars == null || cars.Length == 0) cars = new[] { CarSpec.CreatePanda(), CarSpec.CreateCoupe(), CarSpec.CreateSedan() };
             if (showMenuOnStart) RaceSettings.Load(this);
             ApplyOptions();
+            ApplyDisplay(true);
+            Ensure<HudView>();
+            Ensure<MenuView>();
+            Ensure<TouchControls>();
             track.Build();
             player.WallHit += OnWallHit;
             player.RivalContact += v => { Water = Mathf.Max(0, Water - v * 0.8f); chaseCamera.Shake(0.4f); };
+        }
+
+        void Ensure<T>() where T : Component
+        {
+            if (GetComponent<T>() == null) gameObject.AddComponent<T>();
         }
 
         void Start()
@@ -123,8 +133,10 @@ namespace Kurogane.Race
             }
 
             chaseCamera.target = player;
+            chaseCamera.showroom = false;
             chaseCamera.Snap();
             if (retro != null) retro.ResetHistory();
+            SetShowroomLight(false);
 
             State = RaceState.Countdown;
             countdown = 3.6f;
@@ -144,7 +156,8 @@ namespace Kurogane.Race
         {
             if (State == RaceState.Menu) { MenuInput(); return; }
             if (State == RaceState.Paused) { PauseInput(); return; }
-            if (DriverInput.Pause && (State == RaceState.Racing || State == RaceState.Countdown))
+            // El estado va primero: leer Pause consume la pulsación táctil
+            if ((State == RaceState.Racing || State == RaceState.Countdown) && DriverInput.Pause)
             {
                 stateBeforePause = State;
                 State = RaceState.Paused;
@@ -186,8 +199,8 @@ namespace Kurogane.Race
                 case RaceState.Finished:
                     finishTimer += dt;
                     if (DriverInput.Confirm) StartRace();
-                    if (DriverInput.NextCar) { selectedCar = (selectedCar + 1) % cars.Length; RaceSettings.Save(this); StartRace(); }
-                    if (DriverInput.Pause) OpenMenu();
+                    else if (DriverInput.NextCar) NextCarAndRestart();
+                    else if (DriverInput.Pause) OpenMenu();
                     break;
             }
         }
@@ -299,11 +312,11 @@ namespace Kurogane.Race
             catch (System.Exception e) { Debug.LogWarning("No se pudo guardar el récord: " + e.Message); }
         }
 
-        // ---------- HUD provisional ----------
+        // ---------- Datos para la interfaz (Kurogane.Hud) ----------
 
-        static string Tier(float c) => c > 4000 ? "LEGEND" : c > 2000 ? "AWESOME" : c > 900 ? "GREAT" : c > 300 ? "NICE" : "DRIFT";
+        public static string Tier(float c) => c > 4000 ? "LEGEND" : c > 2000 ? "AWESOME" : c > 900 ? "GREAT" : c > 300 ? "NICE" : "DRIFT";
 
-        static string Fmt(float t)
+        public static string Fmt(float t)
         {
             if (float.IsInfinity(t)) return "—";
             int m = (int)(t / 60);
@@ -314,57 +327,19 @@ namespace Kurogane.Race
         void Show(string text, float time = 1.6f) { toast = text; toastTimer = time; }
         void Big(string text) { bigMessage = text; msgTimer = 0.9f; }
 
-        GUIStyle big, mid, small, center, smallCenter, gearStyle;
-
-        void OnGUI()
-        {
-            if (player == null || player.Track == null) return;
-            float u = Screen.height / 720f;
-            if (big == null)
-            {
-                big = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.BoldAndItalic, alignment = TextAnchor.MiddleCenter };
-                mid = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold };
-                small = new GUIStyle(GUI.skin.label);
-                center = new GUIStyle(mid) { alignment = TextAnchor.MiddleCenter };
-                smallCenter = new GUIStyle(small) { alignment = TextAnchor.MiddleCenter };
-                gearStyle = new GUIStyle(big) { fontStyle = FontStyle.Bold };
-            }
-            big.fontSize = (int)(72 * u);
-            mid.fontSize = (int)(30 * u);
-            small.fontSize = (int)(16 * u);
-            center.fontSize = (int)(26 * u);
-            smallCenter.fontSize = (int)(16 * u);
-            gearStyle.fontSize = (int)(56 * u);
-
-            if (State == RaceState.Menu) { DrawMenu(u); return; }
-
-            float x = 20 * u, y = 16 * u, w = Screen.width;
-            GUI.Label(new Rect(x, y, 400 * u, 40 * u), Fmt(RaceTime), mid);
-            GUI.Label(new Rect(x, y + 36 * u, 400 * u, 24 * u), "Récord " + Fmt(best.time), small);
-            if (splitTimer > 0) GUI.Label(new Rect(x, y + 60 * u, 400 * u, 30 * u), splitText, small);
-            if (rival.isActiveAndEnabled)
-            {
-                bool first = State == RaceState.Finished ? won : player.Index * track.Data.Step > rival.Distance;
-                GUI.Label(new Rect(x, y + 90 * u, 400 * u, 40 * u), first ? "1º" : "2º", mid);
-            }
-            GUI.Label(new Rect(x, Screen.height - 60 * u, 400 * u, 40 * u), $"Vaso {Mathf.RoundToInt(Water)}%", mid);
-
-            DrawGearbox(u);
-            GUI.Label(new Rect(w - 320 * u, y, 300 * u, 30 * u), $"{(track.Data.Length - player.Index * track.Data.Step) / 1000f:0.00} km a meta", small);
-
-            var flags = new List<string>();
-            if (player.Slipstream) flags.Add("REBUFO");
-            if (player.InGutter) flags.Add("溝 MIZO");
-            if (player.RevLimiter) flags.Add("LÍMITE RPM");
-            if (flags.Count > 0) GUI.Label(new Rect(0, Screen.height - 170 * u, w, 30 * u), string.Join("   ", flags), center);
-
-            if (chain > 5) GUI.Label(new Rect(0, Screen.height * 0.2f, w, 80 * u),
-                $"{Tier(chain * multiplier)}  {Mathf.RoundToInt(chain)}  x{multiplier}  ({Mathf.RoundToInt(Mathf.Abs(player.Slip) * Mathf.Rad2Deg)}°)", center);
-            if (msgTimer > 0) GUI.Label(new Rect(0, Screen.height * 0.32f, w, 100 * u), bigMessage, big);
-            if (toastTimer > 0) GUI.Label(new Rect(0, Screen.height * 0.62f, w, 30 * u), toast, center);
-
-            if (State == RaceState.Paused) DrawPause(u);
-            if (State == RaceState.Finished && finishTimer > 1.5f) DrawResults(u);
-        }
+        public float BestTime => best.time;
+        public string SplitText => splitTimer > 0 ? splitText : null;
+        public string Toast => toastTimer > 0 ? toast : null;
+        public string BigMessage => msgTimer > 0 ? bigMessage : null;
+        public float Chain => chain;
+        public int Multiplier => multiplier;
+        public bool Won => won;
+        public int Hits => hits;
+        public int GutterRuns => gutterRuns;
+        public bool HasRival => rival.isActiveAndEnabled;
+        public bool PlayerAhead => State == RaceState.Finished ? won : player.Index * track.Data.Step > rival.Distance;
+        public float MetersToGoal => track.Data.Length - player.Index * track.Data.Step;
+        public bool ShowResults => State == RaceState.Finished && finishTimer > 1.5f;
+        public CarSpec NextCarSpec => cars[(selectedCar + 1) % cars.Length];
     }
 }
