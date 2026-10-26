@@ -74,7 +74,8 @@ namespace Kurogane.Track
             float W = d.W;
 
             // Calzada
-            var road = MaterialFactory.Lit(Color.white, ProceduralTextures.Asphalt(), 0.3f).SmoothnessFromAlpha();
+            // Brillo bajo en seco para que la máscara de charcos no se note; la lluvia lo sube (WeatherSystem)
+            var road = MaterialFactory.Lit(Color.white, ProceduralTextures.Asphalt(), 0.1f).SmoothnessFromAlpha();
             AddRibbon("Road", d.N, i =>
             {
                 var p = d.P[i];
@@ -123,6 +124,7 @@ namespace Kurogane.Track
             BuildBanner(d.FinishIndex + 1, new Color(0.11f, 0.16f, 0.5f));
             BuildSigns();
             BuildCrowd();
+            BuildParkedCars();
             if (d.TownStart < d.N) new Kurogane.City.CityBuilder(this, cityStyle).Build();
         }
 
@@ -146,8 +148,11 @@ namespace Kurogane.Track
                 {
                     case "Posts": case "Reflectors": case "CatEyes": case "Chevrons": case "WarningSigns":
                     case "SpeedSigns": case "SignBacks": case "SignPoles": case "KmPost":
-                    case Kurogane.City.CityBuilder.DetailName: case "Rotulo": case "Ambar": case "LuzPasoNivel":
+                    case Kurogane.City.CityBuilder.DetailName: case "Rotulo": case "Ambar": case "LuzPasoNivel": case "Barrera":
                         culling.Add(mr, detailDistance);
+                        break;
+                    case "Carroceria":
+                        culling.Add(mr, detailDistance * 1.3f);
                         break;
                     case "Crowd":
                         culling.Add(mr, detailDistance * 1.3f);

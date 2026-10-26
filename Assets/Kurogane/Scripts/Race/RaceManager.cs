@@ -53,6 +53,12 @@ namespace Kurogane.Race
         WeatherSystem weatherSystem;
         WeatherKind randomWeather;
 
+        [Header("Tráfico")]
+        [Tooltip("0 Auto (apagado en Batalla, encendido en Contrarreloj), 1 Sí, 2 No.")]
+        [Range(0, 2)] public int traffic;
+        TrafficManager trafficManager;
+        bool MountainTraffic => traffic == 1 || (traffic == 0 && mode == RaceMode.Contrarreloj);
+
         [Header("Nota final")]
         [Tooltip("Tiempo de referencia (s): bajar en este tiempo da 30 de los 40 puntos de tiempo; cada segundo menos suma 1.")]
         public float parTime = 120;
@@ -106,6 +112,14 @@ namespace Kurogane.Race
             weatherSystem = GetComponent<WeatherSystem>();
             weatherSystem.Init(track, chaseCamera, retro, player, rival);
             ApplyWeather(true);
+
+            Ensure<TrafficManager>();
+            trafficManager = GetComponent<TrafficManager>();
+            trafficManager.Init(player, track.Data, track.Root, () => State == RaceState.Racing);
+            // El paso a nivel no se cierra mientras el jugador cruza el pueblo en la llegada
+            var crossing = track.Root != null ? track.Root.GetComponentInChildren<Kurogane.City.CrossingController>(true) : null;
+            if (crossing != null)
+                crossing.allowed = () => player.Index < track.Data.FinishIndex - 40 || player.Speed < 1 || State == RaceState.Menu;
             player.WallHit += OnWallHit;
             player.RivalContact += v => { Water = Mathf.Max(0, Water - v * 0.8f); chaseCamera.Shake(0.4f); };
         }
@@ -159,6 +173,11 @@ namespace Kurogane.Race
 
             ResetArrival();
             ApplyWeather(true);
+            if (trafficManager != null)
+            {
+                trafficManager.mountainTraffic = MountainTraffic;
+                trafficManager.ResetMountain();
+            }
             chaseCamera.target = player;
             chaseCamera.showroom = false;
             chaseCamera.Snap();
