@@ -38,9 +38,24 @@ Los materiales generados por código detectan solos si URP está activo.
 | Cámara | C | X / Cuadrado |
 | Volver a la pista | R | Y / Triángulo |
 | Pausa | Esc / P | Start |
-| Otra bajada / cambiar coche (al terminar) | Enter / Tab | A / Select |
+| Otra bajada / cambiar coche / menú (al terminar) | Enter / Tab / Esc | A / Select / Start |
+| Moverse por los menús | ↑ ↓ ← → / W A S D, Enter | Cruceta, A |
 
-La caja manual se activa en el componente **RaceManager → Manual Gearbox**. El coche, el modo (Batalla o Contrarreloj) y la dificultad del rival también se eligen ahí.
+Al pulsar Play aparece el **menú de coche y opciones**: coche, modo (Batalla o Contrarreloj), dificultad del rival, caja (automática o manual) y unidades de velocidad. Lo elegido se guarda entre sesiones. Los menús también funcionan con el ratón, y en la caja manual los botones ▼ / ▲ de la pantalla cambian de marcha. Para saltarte el menú, desactiva **RaceManager → Show Menu On Start** y se usan los valores del inspector.
+
+### Nota final
+
+Al llegar a meta la bajada recibe una nota sobre 100:
+
+| Parte | Puntos | Cómo se gana |
+|---|---|---|
+| Tiempo | 0–40 | 30 puntos bajando en el tiempo de referencia (**RaceManager → Par Time**, 120 s); cada segundo menos suma 1 |
+| Agua | 0–25 | Lo que queda en el vaso |
+| Estilo | 0–20 | Puntos de drift (15 al llegar a **Drift Par**) y hasta 5 canaletas |
+| Limpieza | 0–15 | 15 menos 3 por golpe |
+| Batalla | ±10 | Ganar o perder contra el rival |
+
+**S** desde 90, **A** desde 75, **B** desde 60 y **C** por debajo. El tiempo de referencia y el par de drift son provisionales: ajústalos en el inspector cuando tengas tiempos reales.
 
 ## Estructura
 
@@ -50,7 +65,8 @@ Assets/Kurogane/
     Track/    TrackDefinition (trazado editable), TrackData (cálculo de la pista y el terreno), TrackBuilder (mallas)
     Cars/     CarSpec, CarController (física arcade), RivalAI, CarModelBuilder, CarVisual
     Camera/   ChaseCamera
-    Race/     RaceManager (cuenta atrás, puntos, vaso, sectores, récords, HUD provisional)
+    Race/     RaceManager (cuenta atrás, puntos, vaso, sectores, récords, HUD provisional),
+              RaceManager.Menu (menú, pausa, caja en pantalla, nota final), RaceSettings (opciones guardadas)
     Controls/ DriverInput (teclado y mando; táctil en la Fase 5)
     Core/     MaterialFactory, ProceduralTextures, MeshKit
   Editor/     Menú "Kurogane"
@@ -65,8 +81,8 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | Fase | Contenido | Estado |
 |---|---|---|
 | 0 | Proyecto, repositorio, LFS, paquetes | ✅ |
-| 1 | Pista generada, física del coche, cámara, rival, flujo de carrera, HUD provisional | 🧪 en prueba |
-| 2 | Pulido del juego: menú de coche y opciones, caja manual en pantalla, nota final S–C | ⏳ |
+| 1 | Pista generada, física del coche, cámara, rival, flujo de carrera, HUD provisional | ✅ |
+| 2 | Pulido del juego: menú de coche y opciones, caja manual en pantalla, nota final S–C | 🧪 en prueba |
 | 3 | Arte: coches modelados en Blender, texturas a mano, público, señales, lightmaps, mallas horneadas | ⏳ |
 | 4 | Filtro PS2 (estela entre cuadros, brillo, tramado, color de 16 bits) y audio (motor por coche, turbo, eurobeat) | ⏳ |
 | 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | ⏳ |

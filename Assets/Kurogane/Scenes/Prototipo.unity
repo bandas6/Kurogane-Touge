@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &69380873
+--- !u!1 &112861347
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,65 +127,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 69380875}
-  - component: {fileID: 69380874}
-  m_Layer: 0
-  m_Name: Carrera
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &69380874
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 69380873}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a2db898999cf2a947967b52aef083102, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Race.RaceManager
-  track: {fileID: 715129231}
-  player: {fileID: 1003200286}
-  rival: {fileID: 324596504}
-  chaseCamera: {fileID: 2068357485}
-  cars:
-  - {fileID: 11400000, guid: 45ebca4c9f572ea45a447a5fddfc4111, type: 2}
-  - {fileID: 11400000, guid: ac7ce3d4e00d839439ddb7d2d09a0dd8, type: 2}
-  - {fileID: 11400000, guid: 1e69e9cf8af24314d9d8892059a1bad7, type: 2}
-  selectedCar: 0
-  mode: 0
-  rivalSkill: 1
-  manualGearbox: 0
---- !u!4 &69380875
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 69380873}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &324596503
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 324596506}
-  - component: {fileID: 324596504}
-  - component: {fileID: 324596505}
+  - component: {fileID: 112861350}
+  - component: {fileID: 112861348}
+  - component: {fileID: 112861349}
   m_Layer: 0
   m_Name: Rival
   m_TagString: Untagged
@@ -193,13 +137,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &324596504
+--- !u!114 &112861348
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 324596503}
+  m_GameObject: {fileID: 112861347}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 50be5b846197bee4e9b344bcf665eb77, type: 3}
@@ -207,26 +151,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Cars.RivalAI
   spec: {fileID: 11400000, guid: ac7ce3d4e00d839439ddb7d2d09a0dd8, type: 2}
   skill: 1
---- !u!114 &324596505
+--- !u!114 &112861349
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 324596503}
+  m_GameObject: {fileID: 112861347}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 32ed9ba7f70bff240b3457e4c025ba45, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Cars.CarVisual
   headlights: 1
---- !u!4 &324596506
+--- !u!4 &112861350
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 324596503}
+  m_GameObject: {fileID: 112861347}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -235,7 +179,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &350062199
+--- !u!1 &168950646
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -243,8 +187,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 350062201}
-  - component: {fileID: 350062200}
+  - component: {fileID: 168950648}
+  - component: {fileID: 168950647}
   m_Layer: 0
   m_Name: Luna
   m_TagString: Untagged
@@ -252,13 +196,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!108 &350062200
+--- !u!108 &168950647
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 350062199}
+  m_GameObject: {fileID: 168950646}
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 1
@@ -317,13 +261,13 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!4 &350062201
+--- !u!4 &168950648
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 350062199}
+  m_GameObject: {fileID: 168950646}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -332,7 +276,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &715129230
+--- !u!1 &736296985
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -340,98 +284,50 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 715129232}
-  - component: {fileID: 715129231}
+  - component: {fileID: 736296987}
+  - component: {fileID: 736296986}
   m_Layer: 0
-  m_Name: Pista
+  m_Name: Carrera
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &715129231
+--- !u!114 &736296986
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 715129230}
+  m_GameObject: {fileID: 736296985}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d1b0387273520246adb3018238ea055, type: 3}
+  m_Script: {fileID: 11500000, guid: a2db898999cf2a947967b52aef083102, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Track.TrackBuilder
-  definition: {fileID: 11400000, guid: cfa58f668e015c34b912f56200e8747d, type: 2}
-  seed: 86
-  treeCount: 760
---- !u!4 &715129232
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 715129230}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1003200285
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1003200288}
-  - component: {fileID: 1003200286}
-  - component: {fileID: 1003200287}
-  m_Layer: 0
-  m_Name: Jugador
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1003200286
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1003200285}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bd17e2f98b59a05419bb41c8d7b7e0c9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Cars.CarController
-  spec: {fileID: 11400000, guid: 45ebca4c9f572ea45a447a5fddfc4111, type: 2}
+  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Race.RaceManager
+  track: {fileID: 1542128985}
+  player: {fileID: 1748706191}
+  rival: {fileID: 112861348}
+  chaseCamera: {fileID: 748664462}
+  cars:
+  - {fileID: 11400000, guid: 45ebca4c9f572ea45a447a5fddfc4111, type: 2}
+  - {fileID: 11400000, guid: ac7ce3d4e00d839439ddb7d2d09a0dd8, type: 2}
+  - {fileID: 11400000, guid: 1e69e9cf8af24314d9d8892059a1bad7, type: 2}
+  selectedCar: 0
+  mode: 0
+  rivalSkill: 1
   manualGearbox: 0
-  rival: {fileID: 0}
---- !u!114 &1003200287
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1003200285}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 32ed9ba7f70bff240b3457e4c025ba45, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Cars.CarVisual
-  headlights: 1
---- !u!4 &1003200288
+  useMph: 0
+  showMenuOnStart: 1
+  parTime: 120
+  driftPar: 8000
+--- !u!4 &736296987
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1003200285}
+  m_GameObject: {fileID: 736296985}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -440,7 +336,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2068357484
+--- !u!1 &748664461
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -448,10 +344,10 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2068357488}
-  - component: {fileID: 2068357487}
-  - component: {fileID: 2068357486}
-  - component: {fileID: 2068357485}
+  - component: {fileID: 748664465}
+  - component: {fileID: 748664464}
+  - component: {fileID: 748664463}
+  - component: {fileID: 748664462}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -459,36 +355,36 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2068357485
+--- !u!114 &748664462
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2068357484}
+  m_GameObject: {fileID: 748664461}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0ef7bb6d99fe0b849800d8b98ec1883c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Kurogane.CameraRig.ChaseCamera
-  target: {fileID: 1003200286}
+  target: {fileID: 1748706191}
   mode: 0
   baseFov: 60
---- !u!81 &2068357486
+--- !u!81 &748664463
 AudioListener:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2068357484}
+  m_GameObject: {fileID: 748664461}
   m_Enabled: 1
---- !u!20 &2068357487
+--- !u!20 &748664464
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2068357484}
+  m_GameObject: {fileID: 748664461}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -533,13 +429,121 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &2068357488
+--- !u!4 &748664465
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2068357484}
+  m_GameObject: {fileID: 748664461}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1542128984
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1542128986}
+  - component: {fileID: 1542128985}
+  m_Layer: 0
+  m_Name: Pista
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1542128985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1542128984}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d1b0387273520246adb3018238ea055, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Track.TrackBuilder
+  definition: {fileID: 11400000, guid: cfa58f668e015c34b912f56200e8747d, type: 2}
+  seed: 86
+  treeCount: 760
+--- !u!4 &1542128986
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1542128984}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1748706190
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1748706193}
+  - component: {fileID: 1748706191}
+  - component: {fileID: 1748706192}
+  m_Layer: 0
+  m_Name: Jugador
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1748706191
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1748706190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd17e2f98b59a05419bb41c8d7b7e0c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Cars.CarController
+  spec: {fileID: 11400000, guid: 45ebca4c9f572ea45a447a5fddfc4111, type: 2}
+  manualGearbox: 0
+  rival: {fileID: 0}
+--- !u!114 &1748706192
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1748706190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ed9ba7f70bff240b3457e4c025ba45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Cars.CarVisual
+  headlights: 1
+--- !u!4 &1748706193
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1748706190}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -552,9 +556,9 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 350062201}
-  - {fileID: 715129232}
-  - {fileID: 1003200288}
-  - {fileID: 324596506}
-  - {fileID: 2068357488}
-  - {fileID: 69380875}
+  - {fileID: 168950648}
+  - {fileID: 1542128986}
+  - {fileID: 1748706193}
+  - {fileID: 112861350}
+  - {fileID: 748664465}
+  - {fileID: 736296987}

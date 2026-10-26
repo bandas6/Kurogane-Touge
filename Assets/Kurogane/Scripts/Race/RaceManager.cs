@@ -9,13 +9,14 @@ using UnityEngine;
 namespace Kurogane.Race
 {
     public enum RaceMode { Batalla, Contrarreloj }
-    public enum RaceState { Countdown, Racing, Finished, Paused }
+    public enum RaceState { Countdown, Racing, Finished, Paused, Menu }
 
     /// <summary>
     /// Flujo de la bajada: cuenta atrás, cronómetro, vaso de agua, puntos de drift, canaleta, sectores,
     /// llegada y récords. El HUD de la Fase 1 es IMGUI provisional; la interfaz definitiva llega en la Fase 5.
+    /// El menú, la pausa, la caja en pantalla y la nota final están en RaceManager.Menu.cs.
     /// </summary>
-    public class RaceManager : MonoBehaviour
+    public partial class RaceManager : MonoBehaviour
     {
         [Header("Escena")]
         public TrackBuilder track;
@@ -31,6 +32,15 @@ namespace Kurogane.Race
         public RaceMode mode = RaceMode.Batalla;
         public RivalSkill rivalSkill = RivalSkill.Normal;
         public bool manualGearbox;
+        public bool useMph;
+        [Tooltip("Empieza en el menú de coche y opciones. Si está apagado, arranca la bajada directamente con estos valores.")]
+        public bool showMenuOnStart = true;
+
+        [Header("Nota final")]
+        [Tooltip("Tiempo de referencia (s): bajar en este tiempo da 30 de los 40 puntos de tiempo; cada segundo menos suma 1.")]
+        public float parTime = 120;
+        [Tooltip("Puntos de drift que dan los 15 puntos de estilo.")]
+        public int driftPar = 8000;
 
         public RaceState State { get; private set; }
         public float RaceTime { get; private set; }
@@ -66,15 +76,21 @@ namespace Kurogane.Race
         void Awake()
         {
             if (cars == null || cars.Length == 0) cars = new[] { CarSpec.CreatePanda(), CarSpec.CreateCoupe(), CarSpec.CreateSedan() };
+            if (showMenuOnStart) RaceSettings.Load(this);
             track.Build();
             player.WallHit += OnWallHit;
             player.RivalContact += v => { Water = Mathf.Max(0, Water - v * 0.8f); chaseCamera.Shake(0.4f); };
         }
 
-        void Start() => StartRace();
+        void Start()
+        {
+            if (showMenuOnStart) OpenMenu();
+            else StartRace();
+        }
 
         public void StartRace()
         {
+            Time.timeScale = 1;
             var data = track.Data;
             var ps = PlayerSpec;
             player.Init(data, ps, 5, -2.2f);
@@ -115,12 +131,16 @@ namespace Kurogane.Race
 
         void Update()
         {
-            if (DriverInput.Pause)
+            if (State == RaceState.Menu) { MenuInput(); return; }
+            if (State == RaceState.Paused) { PauseInput(); return; }
+            if (DriverInput.Pause && (State == RaceState.Racing || State == RaceState.Countdown))
             {
-                if (State == RaceState.Paused) { State = stateBeforePause; Time.timeScale = 1; }
-                else if (State == RaceState.Racing || State == RaceState.Countdown) { stateBeforePause = State; State = RaceState.Paused; Time.timeScale = 0; }
+                stateBeforePause = State;
+                State = RaceState.Paused;
+                pauseRow = 0;
+                Time.timeScale = 0;
+                return;
             }
-            if (State == RaceState.Paused) return;
             if (DriverInput.CycleCamera) chaseCamera.Cycle();
 
             float dt = Time.deltaTime;
@@ -155,7 +175,8 @@ namespace Kurogane.Race
                 case RaceState.Finished:
                     finishTimer += dt;
                     if (DriverInput.Confirm) StartRace();
-                    if (DriverInput.NextCar) { selectedCar = (selectedCar + 1) % cars.Length; StartRace(); }
+                    if (DriverInput.NextCar) { selectedCar = (selectedCar + 1) % cars.Length; RaceSettings.Save(this); StartRace(); }
+                    if (DriverInput.Pause) OpenMenu();
                     break;
             }
         }
@@ -236,6 +257,7 @@ namespace Kurogane.Race
             player.ControlsEnabled = false;
             player.AutoBrake = true;
             won = mode == RaceMode.Contrarreloj || !rival.Finished;
+            Result = Grade();
             Big("GOAL");
             if (RaceTime < best.time)
             {
@@ -281,7 +303,7 @@ namespace Kurogane.Race
         void Show(string text, float time = 1.6f) { toast = text; toastTimer = time; }
         void Big(string text) { bigMessage = text; msgTimer = 0.9f; }
 
-        GUIStyle big, mid, small, center;
+        GUIStyle big, mid, small, center, smallCenter, gearStyle;
 
         void OnGUI()
         {
@@ -293,11 +315,17 @@ namespace Kurogane.Race
                 mid = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold };
                 small = new GUIStyle(GUI.skin.label);
                 center = new GUIStyle(mid) { alignment = TextAnchor.MiddleCenter };
+                smallCenter = new GUIStyle(small) { alignment = TextAnchor.MiddleCenter };
+                gearStyle = new GUIStyle(big) { fontStyle = FontStyle.Bold };
             }
             big.fontSize = (int)(72 * u);
             mid.fontSize = (int)(30 * u);
             small.fontSize = (int)(16 * u);
             center.fontSize = (int)(26 * u);
+            smallCenter.fontSize = (int)(16 * u);
+            gearStyle.fontSize = (int)(56 * u);
+
+            if (State == RaceState.Menu) { DrawMenu(u); return; }
 
             float x = 20 * u, y = 16 * u, w = Screen.width;
             GUI.Label(new Rect(x, y, 400 * u, 40 * u), Fmt(RaceTime), mid);
@@ -310,12 +338,7 @@ namespace Kurogane.Race
             }
             GUI.Label(new Rect(x, Screen.height - 60 * u, 400 * u, 40 * u), $"Vaso {Mathf.RoundToInt(Water)}%", mid);
 
-            float kmh = player.Speed * 3.6f;
-            GUI.Label(new Rect(w - 320 * u, Screen.height - 110 * u, 300 * u, 40 * u), $"{Mathf.RoundToInt(kmh)} km/h", mid);
-            GUI.Label(new Rect(w - 320 * u, Screen.height - 74 * u, 300 * u, 30 * u),
-                $"Marcha {player.Gear + 1} {(player.manualGearbox ? "MT" : "AT")}   {Mathf.RoundToInt(player.Rpm)} rpm", small);
-            float rpmFrac = Mathf.Clamp01(player.Rpm / 9000f);
-            GUI.Box(new Rect(w - 320 * u, Screen.height - 40 * u, 300 * u * rpmFrac, 14 * u), GUIContent.none);
+            DrawGearbox(u);
             GUI.Label(new Rect(w - 320 * u, y, 300 * u, 30 * u), $"{(track.Data.Length - player.Index * track.Data.Step) / 1000f:0.00} km a meta", small);
 
             var flags = new List<string>();
@@ -329,16 +352,8 @@ namespace Kurogane.Race
             if (msgTimer > 0) GUI.Label(new Rect(0, Screen.height * 0.32f, w, 100 * u), bigMessage, big);
             if (toastTimer > 0) GUI.Label(new Rect(0, Screen.height * 0.62f, w, 30 * u), toast, center);
 
-            if (State == RaceState.Paused)
-                GUI.Label(new Rect(0, Screen.height * 0.45f, w, 60 * u), "PAUSA · Esc para continuar", center);
-            if (State == RaceState.Finished && finishTimer > 1.5f)
-            {
-                string verdict = mode == RaceMode.Batalla ? (won ? "勝利 · Victoria" : "敗北 · Derrota") : "ゴール · Meta";
-                GUI.Label(new Rect(0, Screen.height * 0.3f, w, 60 * u), verdict, center);
-                GUI.Label(new Rect(0, Screen.height * 0.3f + 50 * u, w, 200 * u),
-                    $"Tiempo {Fmt(RaceTime)}   ·   Agua {Mathf.RoundToInt(Water)}%   ·   Drift {Score}   ·   Canaletas {gutterRuns}   ·   Golpes {hits}\n" +
-                    $"Enter: otra bajada   ·   Tab: cambiar coche ({cars[(selectedCar + 1) % cars.Length].displayName})", center);
-            }
+            if (State == RaceState.Paused) DrawPause(u);
+            if (State == RaceState.Finished && finishTimer > 1.5f) DrawResults(u);
         }
     }
 }
