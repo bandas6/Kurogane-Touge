@@ -75,9 +75,10 @@ namespace Kurogane.Atmosphere
 
             Add("Cúpula", Dome(), Material(white, false, 1000));
             Add("Cordillera lejana", Ridge(0.97f, 9, 0.35f, valley, Color.Lerp(horizon, new Color(0.04f, 0.045f, 0.08f), 0.55f)), Material(white, false, 1001));
-            Add("Cordillera cercana", Ridge(0.93f, 6, 0.6f, valley, new Color(0.018f, 0.022f, 0.04f)), Material(white, false, 1002));
-            Add("Estrellas y valle", Points(valley), Material(white, true, 1003));
-            Add("Bruma", Mist(valley), Material(soft, true, 1004));
+            Add("Ciudad lejana", Skyline(valley), Material(white, false, 1002));
+            Add("Cordillera cercana", Ridge(0.93f, 6, 0.6f, valley, new Color(0.018f, 0.022f, 0.04f)), Material(white, false, 1003));
+            Add("Estrellas y valle", Points(valley), Material(white, true, 1004));
+            Add("Bruma", Mist(valley), Material(soft, true, 1005));
             BuildMoon(soft);
         }
 
@@ -165,6 +166,37 @@ namespace Kurogane.Atmosphere
             return Finish(v, c, null, t);
         }
 
+        // Edificios de la silueta lejana: (azimut inicial, azimut final, elevación del tejado)
+        readonly List<Vector3> skyline = new List<Vector3>();
+
+        /// <summary>
+        /// Silueta de la ciudad lejana en el valle (bloque B): una franja de bloques algo más claros que el suelo,
+        /// más altos en el centro. Sus ventanas se añaden con las luces del valle.
+        /// </summary>
+        Mesh Skyline(float valley)
+        {
+            skyline.Clear();
+            var v = new List<Vector3>();
+            var c = new List<Color>();
+            var t = new List<int>();
+            var color = Color.Lerp(ground, horizon, 0.45f);
+            float r = radius * 0.95f;
+            for (float az = valley - 30; az < valley + 30;)
+            {
+                float w = Mathf.Lerp(0.5f, 1.8f, (float)rng.NextDouble());
+                float centre = 1 - Mathf.Abs(Mathf.DeltaAngle(az, valley)) / 30;
+                float top = Mathf.Lerp(-0.8f, 0.4f + 1.6f * centre, (float)rng.NextDouble() * 0.5f + 0.5f * centre);
+                skyline.Add(new Vector3(az, az + w, top));
+                int o = v.Count;
+                v.Add(Dir(az, -2) * r); v.Add(Dir(az + w, -2) * r); v.Add(Dir(az + w, top) * r); v.Add(Dir(az, top) * r);
+                for (int k = 0; k < 4; k++) c.Add(color);
+                t.Add(o); t.Add(o + 3); t.Add(o + 2);
+                t.Add(o); t.Add(o + 2); t.Add(o + 1);
+                az += w + Mathf.Lerp(0, 0.3f, (float)rng.NextDouble());
+            }
+            return Finish(v, c, null, t);
+        }
+
         /// <summary>Estrellas en el cielo y luces de ciudad bajo el horizonte hacia el valle, como quads mirando al centro.</summary>
         Mesh Points(float valley)
         {
@@ -203,6 +235,13 @@ namespace Kurogane.Atmosphere
                 float b = Mathf.Lerp(0.35f, 1f, (float)rng.NextDouble()) * Mathf.Lerp(1f, 0.55f, Mathf.Clamp01(-elev / 14));
                 Quad(v, c, uv, t, Dir(az, elev) * r, Mathf.Lerp(0.3f, 0.6f, (float)rng.NextDouble()), (rng.Next(7) == 0 ? cold : warm) * b);
             }
+
+            // Ventanas encendidas en la silueta de la ciudad lejana
+            foreach (var b in skyline)
+                for (float az = b.x + 0.12f; az < b.y - 0.08f; az += 0.22f)
+                    for (float el = -1.7f; el < b.z - 0.1f; el += 0.28f)
+                        if (rng.Next(3) == 0)
+                            Quad(v, c, uv, t, Dir(az, el) * radius * 0.945f, 0.28f, new Color(1f, 0.8f, 0.5f) * Mathf.Lerp(0.3f, 0.8f, (float)rng.NextDouble()));
             return Finish(v, c, uv, t);
         }
 
@@ -239,10 +278,10 @@ namespace Kurogane.Atmosphere
             var pos = Dir(az, elev) * radius * 0.96f;
             var v = new List<Vector3>(); var c = new List<Color>(); var uv = new List<Vector2>(); var t = new List<int>();
             Quad(v, c, uv, t, pos, 26, new Color(0.55f, 0.6f, 0.8f) * 0.22f);
-            Add("Halo", Finish(v, c, uv, t), Material(soft, true, 1005));
+            Add("Halo", Finish(v, c, uv, t), Material(soft, true, 1006));
             v.Clear(); c.Clear(); uv.Clear(); t.Clear();
             Quad(v, c, uv, t, pos * 0.995f, 5.5f, new Color(1f, 0.98f, 0.9f));
-            Add("Luna", Finish(v, c, uv, t), Material(ProceduralTextures.Moon(), true, 1006));
+            Add("Luna", Finish(v, c, uv, t), Material(ProceduralTextures.Moon(), true, 1007));
         }
 
         // ---------- Utilidades ----------

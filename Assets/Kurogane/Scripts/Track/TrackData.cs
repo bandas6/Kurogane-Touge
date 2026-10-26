@@ -44,6 +44,19 @@ namespace Kurogane.Track
         public readonly float[] KSmooth;
         public readonly int[] Sectors;
 
+        /// <summary>Puntos del tramo cronometrado (antes del primer tramo tras la meta).</summary>
+        public readonly int TimedCount;
+        /// <summary>Punto donde salta la meta. Es el mismo de antes del pueblo, así los récords siguen valiendo.</summary>
+        public readonly int FinishIndex;
+        /// <summary>Longitud cronometrada en metros (para el rival y la distancia a meta).</summary>
+        public readonly float TimedLength;
+        /// <summary>Primer punto de la calle mayor del pueblo (primera recta tras la meta).</summary>
+        public readonly int TownStart;
+        /// <summary>Punto donde se para el coche en la llegada, frente a la tienda de tofu.</summary>
+        public readonly int StopIndex;
+
+        public bool InTown(int i) => i >= TownStart;
+
         // Terreno a cada lado: [0] izquierda, [1] derecha
         readonly float[][] off = new float[2][], dy = new float[2][], plat = new float[2][];
 
@@ -53,11 +66,14 @@ namespace Kurogane.Track
             W = def.halfWidth;
             var pts = new List<TrackPoint>();
             float x = 0, z = 0, h = 0, y = 0;
-            foreach (var s in def.segments)
+            int timed = -1, town = -1;
+            foreach (var s in def.AllSegments())
             {
                 int n = Mathf.Max(1, Mathf.RoundToInt(s.Length / Step));
                 float d = s.angle * Mathf.Deg2Rad / n;
-                float sl = s.type == SegmentType.Hairpin ? def.hairpinSlope : def.slope;
+                float sl = s.afterGoal ? def.afterGoalSlope : s.type == SegmentType.Hairpin ? def.hairpinSlope : def.slope;
+                if (s.afterGoal && timed < 0) timed = pts.Count;
+                if (s.afterGoal && s.type == SegmentType.Straight && town < 0) town = pts.Count;
                 var info = new SegmentInfo { type = s.type, angle = s.angle, start = pts.Count, end = pts.Count + n - 1, tunnel = s.tunnel };
                 Segments.Add(info);
                 if (s.type == SegmentType.Hairpin) Hairpins.Add(info);
@@ -81,6 +97,11 @@ namespace Kurogane.Track
             P = pts.ToArray();
             N = P.Length;
             Length = N * Step;
+            TimedCount = timed < 0 ? N : timed;
+            FinishIndex = TimedCount - 5;
+            TimedLength = TimedCount * Step;
+            TownStart = town < 0 ? N : town;
+            StopIndex = Mathf.Min(N - 8, TownStart + Mathf.RoundToInt((N - TownStart) * 0.5f));
 
             GutterSide = new sbyte[N];
             foreach (var hp in Hairpins)
@@ -106,7 +127,8 @@ namespace Kurogane.Track
             for (int i = N - 2; i >= 0; i--)
                 VMax[i] = Mathf.Min(VMax[i], Mathf.Sqrt(VMax[i + 1] * VMax[i + 1] + 2 * 9 * Step));
 
-            Sectors = new[] { N / 3, 2 * N / 3, N - 5 };
+            // Sobre el tramo cronometrado, igual que antes del pueblo: los parciales guardados siguen valiendo
+            Sectors = new[] { TimedCount / 3, 2 * TimedCount / 3, FinishIndex };
             BuildTerrain();
         }
 
@@ -172,6 +194,12 @@ namespace Kurogane.Track
                         o[i] = Mathf.Max(o[i], 18);
                     }
                 }
+                // Pueblo: terreno casi llano y ancho a los dos lados de la calle mayor
+                for (int i = Mathf.Max(0, TownStart - 6); i < N; i++)
+                {
+                    o[i] = 75;
+                    dd[i] = -0.3f;
+                }
                 // Explanada para el público por fuera de cada horquilla
                 foreach (var hp in Hairpins)
                     if ((int)Mathf.Sign(hp.angle) == -s)
@@ -215,7 +243,7 @@ namespace Kurogane.Track
             return Mathf.Clamp((dy[si][i] - 1.5f) * 0.5f, 0, 3.4f) * (1 - plat[si][i]);
         }
 
-        public bool HasRail(int i, int side) => WallHeight(i, side) < 0.4f && !InTunnel(i);
+        public bool HasRail(int i, int side) => WallHeight(i, side) < 0.4f && !InTunnel(i) && i < TownStart - 8;
 
         /// <summary>
         /// Sección transversal del terreno a un lado: 4 filas (distancia lateral sin signo, altura).

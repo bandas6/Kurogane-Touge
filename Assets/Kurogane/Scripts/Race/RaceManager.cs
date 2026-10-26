@@ -135,6 +135,7 @@ namespace Kurogane.Race
                 rival.GetComponent<CarVisual>().Build(RivalSpec);
             }
 
+            ResetArrival();
             chaseCamera.target = player;
             chaseCamera.showroom = false;
             chaseCamera.Snap();
@@ -196,16 +197,24 @@ namespace Kurogane.Race
                     RaceTime += dt;
                     if (DriverInput.Respawn) { player.Respawn(); chain = 0; multiplier = 1; Show("DE VUELTA EN LA PISTA"); }
                     Scoring(dt);
-                    if (player.Index >= track.Data.N - 5) Finish();
+                    if (player.Index >= track.Data.FinishIndex) Finish();
                     break;
 
                 case RaceState.Finished:
                     finishTimer += dt;
-                    if (DriverInput.Confirm) StartRace();
+                    if (!ArrivalDone)
+                    {
+                        UpdateArrival(dt);
+                        if (DriverInput.Confirm) SkipArrival();
+                    }
+                    else if (DriverInput.Confirm) StartRace();
                     else if (DriverInput.NextCar) NextCarAndRestart();
                     else if (DriverInput.Pause) OpenMenu();
                     break;
             }
+            // Cerca de la meta se alarga el plano lejano para ver la ciudad del valle
+            var td = track.Data;
+            chaseCamera.farBlend = Mathf.InverseLerp(td.FinishIndex - 150, td.FinishIndex - 20, player.Index);
         }
 
         void Scoring(float dt)
@@ -281,9 +290,8 @@ namespace Kurogane.Race
             State = RaceState.Finished;
             Score += Mathf.RoundToInt(chain * multiplier);
             chain = 0;
-            player.ControlsEnabled = false;
-            player.AutoBrake = true;
             won = mode == RaceMode.Contrarreloj || !rival.Finished;
+            BeginArrival();
             Result = Grade();
             Big("GOAL");
             if (RaceTime < best.time)
@@ -341,8 +349,8 @@ namespace Kurogane.Race
         public int GutterRuns => gutterRuns;
         public bool HasRival => rival.isActiveAndEnabled;
         public bool PlayerAhead => State == RaceState.Finished ? won : player.Index * track.Data.Step > rival.Distance;
-        public float MetersToGoal => track.Data.Length - player.Index * track.Data.Step;
-        public bool ShowResults => State == RaceState.Finished && finishTimer > 1.5f;
+        public float MetersToGoal => Mathf.Max(0, track.Data.TimedLength - player.Index * track.Data.Step);
+        public bool ShowResults => State == RaceState.Finished && ArrivalDone && finishTimer > 1.5f;
         public CarSpec NextCarSpec => cars[(selectedCar + 1) % cars.Length];
     }
 }

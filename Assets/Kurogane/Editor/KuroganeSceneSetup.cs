@@ -35,6 +35,7 @@ namespace Kurogane.EditorTools
             var panda = LoadOrCreate(DataDir + "/Car_Panda.asset", CarSpec.CreatePanda);
             var coupe = LoadOrCreate(DataDir + "/Car_Coupe.asset", CarSpec.CreateCoupe);
             var sedan = LoadOrCreate(DataDir + "/Car_Sedan.asset", CarSpec.CreateSedan);
+            var cityStyle = LoadOrCreate(DataDir + "/PuebloMeta.asset", () => ScriptableObject.CreateInstance<Kurogane.City.CityStyle>());
             AssetDatabase.SaveAssets();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -62,6 +63,7 @@ namespace Kurogane.EditorTools
             var trackGo = new GameObject("Pista");
             var builder = trackGo.AddComponent<TrackBuilder>();
             builder.definition = trackDef;
+            builder.cityStyle = cityStyle;
 
             // Cielo y horizonte: sigue a la cámara y se genera al arrancar (o se hornea con la pista)
             var sky = new GameObject("Cielo").AddComponent<SkyDome>();

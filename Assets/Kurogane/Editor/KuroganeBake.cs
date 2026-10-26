@@ -24,6 +24,7 @@ namespace Kurogane.EditorTools
         static readonly HashSet<string> Lightmapped = new HashSet<string>
         {
             "Road", "Gutter", "Shoulder", "Wall", "Slope", "GuardRail", "TunnelShell", "Block", "LampPoles", "LampArms",
+            Kurogane.City.CityBuilder.GroundName, Kurogane.City.CityBuilder.WaterName,
         };
 
         [MenuItem("Kurogane/Hornear pista", priority = 10)]

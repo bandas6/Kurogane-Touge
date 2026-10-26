@@ -14,6 +14,14 @@ namespace Kurogane.CameraRig
         public float baseFov = 60;
         [Tooltip("Garaje: la cámara gira despacio alrededor del coche parado (menú).")]
         public bool showroom;
+        [Tooltip("Plano fijo (llegada al pueblo): la cámara se queda en shotPosition y sigue al coche con la vista.")]
+        public bool cinematic;
+        public Vector3 shotPosition;
+        public float shotFov = 38;
+        [Tooltip("0 = plano lejano en la niebla de la montaña; 1 = lejos, para ver la ciudad del valle desde el pueblo.")]
+        [Range(0, 1)] public float farBlend;
+        public float townFarClip = 1600;
+        float baseFar;
 
         Camera cam;
         float camHeading;
@@ -30,6 +38,7 @@ namespace Kurogane.CameraRig
             // Más allá del final de la niebla lineal todo es del color del fondo: no hace falta dibujarlo
             if (RenderSettings.fog && RenderSettings.fogMode == FogMode.Linear)
                 cam.farClipPlane = Mathf.Min(cam.farClipPlane, RenderSettings.fogEndDistance + 30);
+            baseFar = cam.farClipPlane;
         }
 
         public void Snap()
@@ -53,6 +62,16 @@ namespace Kurogane.CameraRig
             float h = target.Heading, sp = target.Speed;
             var fwd = new Vector3(Mathf.Sin(h), 0, Mathf.Cos(h));
             Vector3 look;
+            // La ciudad del valle (más allá de la niebla) solo se dibuja cerca del pueblo
+            cam.farClipPlane = Mathf.Lerp(baseFar, Mathf.Max(baseFar, townFarClip), farBlend);
+            if (cinematic)
+            {
+                camPos = shotPosition;
+                camHeading = h;
+                transform.SetPositionAndRotation(shotPosition, Quaternion.LookRotation(car + Vector3.up * 0.6f - shotPosition));
+                cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, shotFov, 0.2f);
+                return;
+            }
             if (showroom)
             {
                 orbitAngle += Time.unscaledDeltaTime * 0.18f;

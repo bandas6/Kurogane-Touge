@@ -1,5 +1,6 @@
 // Cielo de Kurogane Touge (SkyDome): color por vértice por la textura, sin niebla ni luces.
 // Se dibuja en la cola Background sin escribir profundidad, así todo lo demás queda delante.
+// La ciudad media del valle lo usa en la cola Geometry y con _ZWrite = 1 (sin niebla, con profundidad).
 // Sin LightMode, URP lo dibuja como SRPDefaultUnlit; también funciona con el pipeline integrado.
 Shader "Kurogane/Sky"
 {
@@ -8,6 +9,7 @@ Shader "Kurogane/Sky"
         _MainTex ("Textura", 2D) = "white" {}
         [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend ("Mezcla origen", Float) = 1
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend ("Mezcla destino", Float) = 0
+        [Enum(Off, 0, On, 1)] _ZWrite ("Escribir profundidad", Float) = 0
     }
 
     SubShader
@@ -17,7 +19,7 @@ Shader "Kurogane/Sky"
         Pass
         {
             Blend [_SrcBlend] [_DstBlend]
-            ZWrite Off
+            ZWrite [_ZWrite]
             Cull Off
 
             CGPROGRAM

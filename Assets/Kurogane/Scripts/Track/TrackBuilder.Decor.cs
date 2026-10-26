@@ -64,7 +64,7 @@ namespace Kurogane.Track
             // Límite de velocidad en la salida y a la salida del túnel
             foreach (int i in new[] { 20, d.TunnelEnd + 15 })
             {
-                if (i < 2 || i >= d.N - 10) continue;
+                if (i < 2 || i >= d.FinishIndex) continue;
                 var p = d.P[i];
                 Sign(speed, poles, backs, d.At(i, LowSide(i), d.W + 0.95f, p.pos.y - 0.1f), p.forward, 2.1f, new Vector2(0.75f, 0.75f));
             }
@@ -103,7 +103,7 @@ namespace Kurogane.Track
             var d = Data;
             var white = MaterialFactory.Lit(new Color(0.9f, 0.9f, 0.88f), null, 0.2f);
             int every = Mathf.RoundToInt(500 / d.Step);
-            for (int i = every; i < d.N - 10; i += every)
+            for (int i = every; i < d.FinishIndex; i += every)
             {
                 if (d.InTunnel(i)) continue;
                 var p = d.P[i];

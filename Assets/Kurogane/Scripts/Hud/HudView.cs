@@ -139,7 +139,7 @@ namespace Kurogane.Hud
         void LateUpdate()
         {
             var player = race.player;
-            bool visible = race.State != RaceState.Menu && player != null && player.Track != null;
+            bool visible = race.State != RaceState.Menu && !race.HideHud && player != null && player.Track != null;
             root.Show(visible);
             if (!visible) return;
 

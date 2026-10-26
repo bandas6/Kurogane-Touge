@@ -71,6 +71,7 @@ namespace Kurogane.Race
         public void OpenMenu()
         {
             Time.timeScale = 1;
+            ResetArrival();
             State = RaceState.Menu;
             InOptions = false;
             menuRow = System.Array.IndexOf(RacePage, MenuRow.Empezar);
