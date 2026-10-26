@@ -30,6 +30,7 @@ namespace Kurogane.EditorTools
             "Universal Render Pipeline/Lit",
             "Universal Render Pipeline/Unlit",
             "Hidden/Kurogane/PS2Filter",
+            "Kurogane/Sky",
         };
 
         [MenuItem("Kurogane/Compilar/Windows x64", priority = 20)]

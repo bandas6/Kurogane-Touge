@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using Kurogane.Atmosphere;
 using Kurogane.Track;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -33,24 +34,52 @@ namespace Kurogane.EditorTools
             var scene = builder.gameObject.scene;
 
             builder.Rebuild();
-            var root = builder.Root;
             Directory.CreateDirectory(BakedDir);
             string path = $"{BakedDir}/{scene.name}_Pista.asset";
             AssetDatabase.DeleteAsset(path);
             var container = ScriptableObject.CreateInstance<BakedTrackAssets>();
             AssetDatabase.CreateAsset(container, path);
 
+            var count = new int[3];
+            Save(builder.Root, container, true, count);
+
+            // El cielo también se hornea (en el mismo asset), pero no participa en la iluminación global
+            var sky = Object.FindAnyObjectByType<SkyDome>();
+            if (sky == null)
+            {
+                sky = new GameObject("Cielo").AddComponent<SkyDome>();
+                sky.shader = AssetDatabase.LoadAssetAtPath<Shader>(KuroganeSceneSetup.SkyShaderPath);
+            }
+            sky.Build();
+            Save(sky.Root, container, false, count);
+            sky.baked = true;
+            EditorUtility.SetDirty(sky);
+
+            builder.baked = true;
+            EditorUtility.SetDirty(builder);
+            AssetDatabase.SaveAssets();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"Kurogane: pista y cielo horneados en {path} ({count[0]} mallas, {count[1]} materiales, {count[2]} texturas). " +
+                      "Para las luces, usa Kurogane > Hornear luces.");
+        }
+
+        /// <summary>
+        /// Guarda como sub-assets de <paramref name="container"/> las mallas, materiales y texturas creados por código
+        /// bajo <paramref name="root"/>. Con <paramref name="staticGI"/> marca las piezas para la iluminación global.
+        /// </summary>
+        static void Save(Transform root, Object container, bool staticGI, int[] count)
+        {
             var saved = new HashSet<Object>();
-            int meshes = 0, materials = 0, textures = 0;
             foreach (var mf in root.GetComponentsInChildren<MeshFilter>(true))
             {
                 var mesh = mf.sharedMesh;
                 // Las primitivas de Unity ya son assets: no se copian
                 if (mesh == null || EditorUtility.IsPersistent(mesh) || !saved.Add(mesh)) continue;
-                if (Lightmapped.Contains(mf.gameObject.name)) Unwrapping.GenerateSecondaryUVSet(mesh);
+                if (staticGI && Lightmapped.Contains(mf.gameObject.name)) Unwrapping.GenerateSecondaryUVSet(mesh);
                 mesh.name = mf.gameObject.name;
                 AssetDatabase.AddObjectToAsset(mesh, container);
-                meshes++;
+                count[0]++;
             }
             foreach (var mr in root.GetComponentsInChildren<MeshRenderer>(true))
             {
@@ -63,24 +92,17 @@ namespace Kurogane.EditorTools
                         var tex = mat.GetTexture(prop);
                         if (tex == null || EditorUtility.IsPersistent(tex) || !saved.Add(tex)) continue;
                         AssetDatabase.AddObjectToAsset(tex, container);
-                        textures++;
+                        count[2]++;
                     }
                     if (string.IsNullOrEmpty(mat.name)) mat.name = mr.gameObject.name;
                     AssetDatabase.AddObjectToAsset(mat, container);
-                    materials++;
+                    count[1]++;
                 }
+                if (!staticGI) continue;
                 // Estático para la iluminación global; sin batching estático (las mallas ya van combinadas)
                 GameObjectUtility.SetStaticEditorFlags(mr.gameObject, StaticEditorFlags.ContributeGI | StaticEditorFlags.OccludeeStatic);
                 mr.receiveGI = Lightmapped.Contains(mr.gameObject.name) ? ReceiveGI.Lightmaps : ReceiveGI.LightProbes;
             }
-
-            builder.baked = true;
-            EditorUtility.SetDirty(builder);
-            AssetDatabase.SaveAssets();
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
-            Debug.Log($"Kurogane: pista horneada en {path} ({meshes} mallas, {materials} materiales, {textures} texturas). " +
-                      "Para las luces, usa Kurogane > Hornear luces.");
         }
 
         [MenuItem("Kurogane/Hornear luces (lightmaps)", priority = 11)]
@@ -137,6 +159,14 @@ namespace Kurogane.EditorTools
             if (root != null) Object.DestroyImmediate(root.gameObject);
             builder.baked = false;
             EditorUtility.SetDirty(builder);
+            var sky = Object.FindAnyObjectByType<SkyDome>();
+            if (sky != null)
+            {
+                var skyRoot = sky.transform.Find("Generated");
+                if (skyRoot != null) Object.DestroyImmediate(skyRoot.gameObject);
+                sky.baked = false;
+                EditorUtility.SetDirty(sky);
+            }
             Lightmapping.Clear();
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
