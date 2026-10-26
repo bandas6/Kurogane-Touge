@@ -149,6 +149,20 @@ Con `CityStyle.extent` mayor que 0 (el Monte Kurogane usa 300) el pueblo es una 
 - Todo usa el atlas del pueblo, se combina en celdas de 60 m y tiene colisionadores para la física del mundo: con **Opciones → Física → Mundo** se puede salir de la calle mayor y chocar con las casas.
 - **Oclusión horneada:** existe **Kurogane → Hornear oclusión** (casas como oclusores), pero el Monte Kurogane no la lleva. En el Redmi Note 11 casi no ahorraba GPU (13,76 frente a 13,87 ms) y costaba 0,8 ms de CPU y 5,6 MB: las casas son bajas y las calles largas y rectas.
 
+### Modo libre
+
+Opción **Modo → Libre** (pistas con pueblo abierto). Se empieza en la tienda de tofu con el coche elegido y se recorren el pueblo y la montaña sin volver al menú ni pasar por pantallas de carga (los dos están en la misma escena), con la física del mundo.
+
+- **Repartos:** junto a la tienda, **Enter** (u **OK** en la pantalla táctil) recoge un pedido. Uno de cada dos va al hotel de la montaña (旅館 峠の湯, a 70 m de la salida) y el resto a una casa del pueblo. Hay tiempo límite y el vaso de agua se derrama como en la bajada: paga más cuanta más agua queda y cuanto antes se llega. Una columna de luz marca el destino.
+- **Desafíos:** al pararse junto a los coches con las luces de emergencia de las horquillas empieza una batalla de bajada contra el rival desde ahí, con la superficie de pista y la llegada de siempre. Después se sigue en el modo libre; ganar da 500 puntos.
+- **Contrarreloj libre:** al pasar por la línea de salida bajando (o por la de meta subiendo) se cronometra sola. Se anula si se sale de la carretera, se da la vuelta o se para. Cada récord da 300 puntos.
+- **Drift:** en la explanada del pueblo y en el aparcamiento del puerto las cadenas de drift suman puntos.
+- **Mapa y viaje rápido:** en la pausa, **Mapa y viaje rápido** muestra el pueblo y la montaña y lleva a los lugares ya descubiertos (se descubren al pasar a menos de 18 m).
+- **Interfaz:** minimapa con el norte arriba, puntos, misión en curso con tiempo y distancia, y la acción disponible.
+- **Clima "Ciclo (modo libre)":** atardecer, noche, niebla, lluvia y amanecer, unos dos minutos y medio cada uno, con 40 s de transición.
+- **Guardado:** puntos, repartos, desafíos ganados, lugares descubiertos y récords de la contrarreloj libre en `libre_<pista>.json`, en `persistentDataPath`.
+- **R** vuelve a la carretera más cercana o, en el pueblo, al cruce más cercano.
+
 ### Ambiente y horneado
 
 - **Señales** (por código, en pixel art): chevrones en el exterior de cada horquilla, aviso de curva cerrada 70 m antes, límite de 40 en la salida y al salir del túnel, postes kilométricos cada 500 m y rótulo sobre la boca del túnel. Brillan un poco, como el retrorreflectante con los faros.
@@ -197,6 +211,8 @@ Medido en un Redmi Note 11 (Snapdragon 680, Adreno 610, Vulkan, 2400×1080), con
 En el Monte Kurogane ningún cuadro pasó de 16,8 ms. En Usuba hubo un cuadro suelto de 50 ms en la niebla y otro de 67 ms en la llegada; el p95 sigue en 16,8 ms. (En una escena de Usuba el contador de GPU devolvió un valor inválido.)
 
 Con el pueblo abierto (bloque H1), en el Monte Kurogane: **pueblo abierto** (la avenida de punta a punta con la física del mundo) 59,0-59,9 fps, GPU 13,8 ms y 10 ms de hilo principal; la memoria pasa de 138 a 149 MB. El resto de escenas sigue igual. Desde H1 el benchmark escribe también el tiempo del hilo principal.
+
+En el modo libre (bloque H3), el mismo recorrido de la avenida dentro del modo libre: 59,8 fps, GPU 14,0 ms y 8,4 ms de hilo principal. La primera pasada tras instalar el APK dio 56,5 fps con tirones (p95 33 ms), probablemente por la compilación de shaders de un APK recién instalado; no lo he comprobado con más pasadas.
 
 ## Estructura
 
@@ -249,7 +265,8 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | E | Varias pistas: escena Inicio, una escena por pista, subida, ambiente por pista y herramienta de pistas (`docs/plan-pistas-modo-libre.md`) | ✅ |
 | F | Pistas nuevas: Usuba (hecha); Akane, Myōseki e Irozaka | 🧪 Usuba hecha |
 | G | Física fuera de la pista: superficie del mundo con colisionadores | ✅ |
-| H1 | Pueblo abierto: red de calles, río, estación y lugares con función | 🧪 en revisión |
+| H1 | Pueblo abierto: red de calles, río, estación y lugares con función | ✅ |
+| H3 | Modo libre: repartos, desafíos, contrarreloj libre, drift, mapa con viaje rápido y ciclo de clima | 🧪 en revisión |
 
 ## Compilar
 

@@ -56,6 +56,42 @@ namespace Kurogane.Atmosphere
         [Tooltip("Multiplica el agarre en derrape (CarController.DriftGripScale).")]
         public float driftGripScale = 1;
 
+        /// <summary>
+        /// Escribe en <paramref name="into"/> la mezcla de <paramref name="a"/> y <paramref name="b"/> (t de 0 a 1), para
+        /// pasar de un clima a otro poco a poco (ciclo de hora y clima del modo libre). Lo que no se puede mezclar
+        /// (tipo, nombre, conos de los faros y relámpagos) cambia a mitad de camino.
+        /// </summary>
+        public static void Blend(WeatherProfile a, WeatherProfile b, float t, WeatherProfile into)
+        {
+            t = Mathf.Clamp01(t);
+            var n = t < 0.5f ? a : b;
+            into.kind = n.kind;
+            into.displayName = n.displayName;
+            into.fogColor = Color.Lerp(a.fogColor, b.fogColor, t);
+            into.fogStart = Mathf.Lerp(a.fogStart, b.fogStart, t);
+            into.fogEnd = Mathf.Lerp(a.fogEnd, b.fogEnd, t);
+            into.zenith = Color.Lerp(a.zenith, b.zenith, t);
+            into.horizonBand = Color.Lerp(a.horizonBand, b.horizonBand, t);
+            into.stars = Mathf.Lerp(a.stars, b.stars, t);
+            into.valleyLights = Mathf.Lerp(a.valleyLights, b.valleyLights, t);
+            into.moon = Mathf.Lerp(a.moon, b.moon, t);
+            into.ridgeHaze = Mathf.Lerp(a.ridgeHaze, b.ridgeHaze, t);
+            into.ambientSky = Color.Lerp(a.ambientSky, b.ambientSky, t);
+            into.ambientEquator = Color.Lerp(a.ambientEquator, b.ambientEquator, t);
+            into.ambientGround = Color.Lerp(a.ambientGround, b.ambientGround, t);
+            into.sunColor = Color.Lerp(a.sunColor, b.sunColor, t);
+            into.sunIntensity = Mathf.Lerp(a.sunIntensity, b.sunIntensity, t);
+            into.sunAngles = Vector2.Lerp(a.sunAngles, b.sunAngles, t);
+            into.lampIntensity = Mathf.Lerp(a.lampIntensity, b.lampIntensity, t);
+            into.headlightIntensity = Mathf.Lerp(a.headlightIntensity, b.headlightIntensity, t);
+            into.headlightCones = n.headlightCones;
+            into.rain = Mathf.Lerp(a.rain, b.rain, t);
+            into.wetness = Mathf.Lerp(a.wetness, b.wetness, t);
+            into.lightning = n.lightning;
+            into.gripScale = Mathf.Lerp(a.gripScale, b.gripScale, t);
+            into.driftGripScale = Mathf.Lerp(a.driftGripScale, b.driftGripScale, t);
+        }
+
         public static WeatherProfile Preset(WeatherKind kind)
         {
             var p = CreateInstance<WeatherProfile>();

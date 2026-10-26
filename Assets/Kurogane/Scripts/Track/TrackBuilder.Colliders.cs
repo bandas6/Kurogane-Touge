@@ -47,6 +47,7 @@ namespace Kurogane.Track
                 for (int i = 0; i < d.N; i++)
                 {
                     if (d.HasTown && i >= d.TownStart - 8) break;
+                    if (InGap(i, s)) continue;
                     var p = d.P[i];
                     var go = new GameObject("Borde") { layer = WorldSurface.ObstacleLayer };
                     go.transform.SetParent(borders, false);

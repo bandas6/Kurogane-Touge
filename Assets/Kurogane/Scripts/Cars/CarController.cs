@@ -111,6 +111,16 @@ namespace Kurogane.Cars
         /// </summary>
         public void PlaceAt(Vector3 position, float heading)
         {
+            ResetTo(NearestAnywhere(position), 0);
+            transform.SetPositionAndRotation(position, Quaternion.Euler(0, heading * Mathf.Rad2Deg, 0));
+            Heading = heading;
+        }
+
+        int reacquire;
+
+        /// <summary>Punto de la pista más cercano buscando en toda ella (no solo alrededor del actual).</summary>
+        int NearestAnywhere(Vector3 position)
+        {
             int best = 0;
             float bd = float.MaxValue;
             for (int i = 0; i < Track.N; i += 2)
@@ -118,9 +128,7 @@ namespace Kurogane.Cars
                 float d = (Track.P[i].pos - position).sqrMagnitude;
                 if (d < bd) { bd = d; best = i; }
             }
-            ResetTo(best, 0);
-            transform.SetPositionAndRotation(position, Quaternion.Euler(0, heading * Mathf.Rad2Deg, 0));
-            Heading = heading;
+            return Track.Nearest(position, best);
         }
 
         /// <summary>Vuelve al centro de la calzada en el punto actual (tecla R).</summary>
@@ -282,6 +290,10 @@ namespace Kurogane.Cars
 
             // Suelo y bordes: los pone la superficie activa (la de la pista en carrera, la del mundo con colisionadores)
             Index = Track.Nearest(pos, Index);
+            // Fuera de la carretera (pueblo, modo libre) el punto cercano puede quedarse atrás: cada pocos pasos se busca
+            // en toda la pista, para que al volver a ella el límite y los bordes sean los de su sitio
+            if (!(surface is TrackSurface) && (++reacquire & 15) == 0 && (Track.P[Index].pos - pos).sqrMagnitude > (Track.HW[Index] + 12) * (Track.HW[Index] + 12))
+                Index = NearestAnywhere(pos);
             float d = Track.Lateral(Index, pos); // para el rebufo, antes de separar del borde
             InGutter = inGut;
             surface.Constrain(this, ref pos, ref vx, ref vz, inGut, out float impact, out var hitPoint);

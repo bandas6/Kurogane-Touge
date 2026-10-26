@@ -17,7 +17,7 @@ namespace Kurogane.Race
         {
             if (!PlayerPrefs.HasKey(Car)) return;
             r.selectedCar = Mathf.Clamp(PlayerPrefs.GetInt(Car), 0, r.cars.Length - 1);
-            r.mode = (RaceMode)Mathf.Clamp(PlayerPrefs.GetInt(Mode), 0, 1);
+            r.mode = (RaceMode)Mathf.Clamp(PlayerPrefs.GetInt(Mode), 0, 2);
             r.rivalSkill = (RivalSkill)Mathf.Clamp(PlayerPrefs.GetInt(Skill), 0, 2);
             r.manualGearbox = PlayerPrefs.GetInt(Manual) == 1;
             r.useMph = PlayerPrefs.GetInt(Mph) == 1;
@@ -31,7 +31,7 @@ namespace Kurogane.Race
                 ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow;
             r.resolution = new Vector2Int(PlayerPrefs.GetInt(ResW, r.resolution.x), PlayerPrefs.GetInt(ResH, r.resolution.y));
             r.showFps = PlayerPrefs.GetInt(Fps, r.showFps ? 1 : 0) == 1;
-            r.weather = Mathf.Clamp(PlayerPrefs.GetInt(Weather, r.weather), 0, 6);
+            r.weather = Mathf.Clamp(PlayerPrefs.GetInt(Weather, r.weather), 0, 7);
             r.traffic = Mathf.Clamp(PlayerPrefs.GetInt(Traffic, r.traffic), 0, 2);
             r.trackId = PlayerPrefs.GetString(Track, r.trackId);
             r.direction = (Kurogane.Track.TrackDirection)Mathf.Clamp(PlayerPrefs.GetInt(Direction, (int)r.direction), 0, 1);

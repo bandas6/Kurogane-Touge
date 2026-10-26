@@ -50,7 +50,7 @@ namespace Kurogane.Race
             MenuRow.Pista, MenuRow.Sentido, MenuRow.Coche, MenuRow.Modo, MenuRow.Rival, MenuRow.Caja, MenuRow.Clima, MenuRow.Trafico,
             MenuRow.Opciones, MenuRow.Empezar
         };
-        static readonly string[] WeatherNames = { "Despejado", "Amanecer", "Atardecer", "Niebla", "Lluvia", "Al azar", "Según la pista" };
+        static readonly string[] WeatherNames = { "Despejado", "Amanecer", "Atardecer", "Niebla", "Lluvia", "Al azar", "Según la pista", "Ciclo (modo libre)" };
         static readonly MenuRow[] OptionsPageDesktop =
         {
             MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil,
@@ -61,7 +61,7 @@ namespace Kurogane.Race
             MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil, MenuRow.Calidad, MenuRow.Fps, MenuRow.Fisica, MenuRow.Volver
         };
         public const int PauseCount = 3;
-        public string PauseLabel(int i) => i == 0 ? "Continuar" : i == 1 ? "Reiniciar " + RunName : "Menú principal";
+        public string PauseLabel(int i) => i == 0 ? "Continuar" : i == 1 ? (IsFree && !InFreeBattle ? "Mapa y viaje rápido" : IsFree ? "Volver al modo libre" : "Reiniciar " + RunName) : "Menú principal";
         static readonly string[] SkillNames = { "Fácil", "Normal", "Leyenda" };
 
         public RaceGrade Result { get; private set; }
@@ -142,7 +142,7 @@ namespace Kurogane.Race
 
         public bool RowEnabled(MenuRow row) =>
             row == MenuRow.Rival ? mode == RaceMode.Batalla
-            : row == MenuRow.Sentido ? SelectedTrack != null && SelectedTrack.allowUphill
+            : row == MenuRow.Sentido ? SelectedTrack != null && SelectedTrack.allowUphill && mode != RaceMode.Libre
             : row != MenuRow.Pista || Tracks.Count > 1;
         public static bool IsAction(MenuRow row) => row == MenuRow.Opciones || row == MenuRow.Empezar || row == MenuRow.Volver;
 
@@ -206,7 +206,8 @@ namespace Kurogane.Race
                     PreviewCar();
                     break;
                 case MenuRow.Modo:
-                    mode = mode == RaceMode.Batalla ? RaceMode.Contrarreloj : RaceMode.Batalla;
+                    mode = (RaceMode)(((int)mode + dir + 3) % 3);
+                    if (mode == RaceMode.Libre && !FreeAvailable) mode = (RaceMode)(((int)mode + dir + 3) % 3);
                     best = LoadBest();
                     break;
                 case MenuRow.Rival: rivalSkill = (RivalSkill)(((int)rivalSkill + dir + 3) % 3); break;
@@ -258,7 +259,7 @@ namespace Kurogane.Race
             switch (row)
             {
                 case MenuRow.Opciones: return "OPCIONES";
-                case MenuRow.Empezar: return "EMPEZAR " + RunName.ToUpper();
+                case MenuRow.Empezar: return mode == RaceMode.Libre ? "EMPEZAR MODO LIBRE" : "EMPEZAR " + RunName.ToUpper();
                 case MenuRow.Volver: return "VOLVER";
                 case MenuRow.Filtro: return "Filtro PS2";
                 case MenuRow.Musica: return "Música";
@@ -281,11 +282,11 @@ namespace Kurogane.Race
                     return SelectedTrack == null || !SelectedTrack.allowUphill ? "Solo bajada"
                         : EffectiveDirection == Kurogane.Track.TrackDirection.Subida ? "Subida" : "Bajada";
                 case MenuRow.Coche: return PlayerSpec.displayName;
-                case MenuRow.Modo: return mode == RaceMode.Batalla ? "Batalla" : "Contrarreloj";
+                case MenuRow.Modo: return mode == RaceMode.Batalla ? "Batalla" : mode == RaceMode.Contrarreloj ? "Contrarreloj" : "Libre (pueblo y montaña)";
                 case MenuRow.Rival: return mode == RaceMode.Batalla ? SkillNames[(int)rivalSkill] : "—";
                 case MenuRow.Caja: return manualGearbox ? "Manual (Q / E)" : "Automática";
                 case MenuRow.Clima: return WeatherNames[Mathf.Clamp(weather, 0, WeatherNames.Length - 1)];
-                case MenuRow.Trafico: return traffic == 1 ? "Sí" : traffic == 2 ? "No" : MountainTraffic ? "Auto (sí)" : "Auto (no en batalla)";
+                case MenuRow.Trafico: return traffic == 1 ? "Sí" : traffic == 2 ? "No" : MountainTraffic || mode == RaceMode.Libre ? "Auto (sí)" : "Auto (no en batalla)";
                 case MenuRow.Velocidad: return useMph ? "mph" : "km/h";
                 case MenuRow.Filtro: return retro == null ? "No disponible" : retroFilter ? "Sí" : "No";
                 case MenuRow.Sonido: return Bar(soundVolume);
@@ -371,17 +372,48 @@ namespace Kurogane.Race
 
         void PauseInput()
         {
+            if (mapOpen)
+            {
+                // Mapa del modo libre: lista de lugares descubiertos para el viaje rápido
+                int n = Discovered.Count;
+                if (DriverInput.Pause) { mapOpen = false; return; }
+                if (n > 0 && DriverInput.MenuUp) mapRow = (mapRow + n - 1) % n;
+                if (n > 0 && DriverInput.MenuDown) mapRow = (mapRow + 1) % n;
+                if (n > 0 && DriverInput.Confirm) FastTravel(Discovered[Mathf.Clamp(mapRow, 0, n - 1)]);
+                return;
+            }
             if (DriverInput.Pause) { Resume(); return; }
             if (DriverInput.MenuUp) pauseRow = (pauseRow + PauseCount - 1) % PauseCount;
             if (DriverInput.MenuDown) pauseRow = (pauseRow + 1) % PauseCount;
             if (DriverInput.Confirm) PauseAction(pauseRow);
         }
 
+        bool mapOpen;
+        int mapRow;
+        /// <summary>El mapa del modo libre está abierto en la pausa.</summary>
+        public bool MapOpen => mapOpen;
+        public int MapRow => mapRow;
+
+        /// <summary>Clic o toque en un lugar del mapa: viaja allí.</summary>
+        public void MapSelect(int i)
+        {
+            if (i < 0 || i >= Discovered.Count) return;
+            mapRow = i;
+            FastTravel(Discovered[i]);
+        }
+
+        public void CloseMap() => mapOpen = false;
+
         public void PauseAction(int i)
         {
             pauseRow = i;
             if (i == 0) Resume();
-            else if (i == 1) StartRace();
+            else if (i == 1)
+            {
+                // En el modo libre el segundo botón abre el mapa (en un desafío, reinicia el modo libre)
+                if (IsFree && !InFreeBattle) { mapOpen = true; mapRow = 0; }
+                else StartRace();
+            }
             else OpenMenu();
         }
 

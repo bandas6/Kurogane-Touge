@@ -138,3 +138,12 @@ MonoBehaviour:
     angle: 0
     lengthOrRadius: 160
     tunnel: 0
+  rivalCornerGrip: 10.5
+  rivalTopSpeed: 52
+  landmarks:
+  - kind: 1
+    atMeters: 70
+    side: 0
+    lateral: 0
+    length: 0
+    name: "\u65C5\u9928 \u5CE0\u306E\u6E6F"

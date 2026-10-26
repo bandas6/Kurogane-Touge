@@ -82,6 +82,7 @@ namespace Kurogane.Track
 
             var d = Geometry;
             var theme = Theme;
+            PrepareLandmarks();
 
             // Calzada
             // Brillo bajo en seco para que la máscara de charcos no se note; la lluvia lo sube (WeatherSystem)
@@ -128,7 +129,7 @@ namespace Kurogane.Track
                     var p = d.P[i];
                     var b = p.pos + p.right * (d.HW[i] + 0.45f) * side;
                     return (b + Vector3.up * 0.45f, b + Vector3.up * 0.82f, 0, 1, 0);
-                }, rail, i => d.HasRail(i, side), true);
+                }, rail, i => d.HasRail(i, side) && !InGap(i, side), true);
             }
             if (bridges) BuildBridges();
 
@@ -145,6 +146,7 @@ namespace Kurogane.Track
             BuildParkedCars();
             var style = theme != null && theme.cityStyle != null ? theme.cityStyle : cityStyle;
             if (d.HasTown) new Kurogane.City.CityBuilder(this, style).Build();
+            RegisterLandmarkPlaces();
             BuildColliders();
             ApplyDirection();
         }
@@ -329,7 +331,7 @@ namespace Kurogane.Track
                 var p = d.P[i];
                 foreach (int s in new[] { -1, 1 })
                 {
-                    if (!d.HasRail(i, s)) continue;
+                    if (!d.HasRail(i, s) || InGap(i, s)) continue;
                     var b = p.pos + p.right * (d.HW[i] + 0.55f) * s;
                     posts.Add(Matrix4x4.TRS(b + Vector3.up * 0.42f, Quaternion.identity, new Vector3(0.12f, 0.85f, 0.12f)));
                     if (i % 8 == 0) reflectors.Add(Matrix4x4.TRS(b + Vector3.up * 1.0f, Quaternion.identity, new Vector3(0.1f, 0.14f, 0.06f)));
