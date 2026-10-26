@@ -21,7 +21,7 @@ namespace Kurogane.EditorTools
         const string ProductName = "Kurogane Touge";
         const string Version = "0.7.0";
 
-        const string ScenePath = "Assets/Kurogane/Scenes/Prototipo.unity";
+        // Escenas: Inicio primero y luego las pistas del catálogo (KuroganeSceneSetup.SyncBuildScenes)
         const string OutputDir = "Builds";
 
         // Shaders que se buscan con Shader.Find en ejecución: si nada los referencia, no entran en la build
@@ -152,16 +152,17 @@ namespace Kurogane.EditorTools
                 Fail($"Este Unity no tiene instalado el módulo para {target}. Añádelo en Unity Hub > Installs > Add modules.");
                 return;
             }
-            if (!File.Exists(ScenePath))
+            var scenes = KuroganeSceneSetup.SyncBuildScenes();
+            if (scenes.Length == 0 || !scenes[0].EndsWith("/" + Kurogane.Race.GameSession.StartScene + ".unity"))
             {
-                Fail("No existe " + ScenePath + ". Ejecuta antes Kurogane > Crear escena de prueba.");
+                Fail("Falta la escena Inicio o la de alguna pista. Ejecuta antes Kurogane > Crear escena Inicio y crea las pistas con Kurogane > Pistas.");
                 return;
             }
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             AssetDatabase.SaveAssets();
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
-                scenes = new[] { ScenePath },
+                scenes = scenes,
                 locationPathName = path,
                 target = target,
                 targetGroup = group,

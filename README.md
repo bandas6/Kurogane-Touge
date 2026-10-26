@@ -14,8 +14,21 @@ Es el port a Unity del prototipo web. El objetivo es publicarlo para **Android**
 
 1. En Unity Hub: **Add → Add project from disk** y elige esta carpeta.
 2. La primera vez Unity importa los paquetes. Si pregunta por el nuevo sistema de entrada, acepta: reinicia el editor y activa el Input System.
-3. En el menú superior: **Kurogane → Crear escena de prueba**. Crea los datos en `Assets/Kurogane/Data` y la escena `Assets/Kurogane/Scenes/Prototipo.unity`.
-4. Pulsa **Play**.
+3. Abre `Assets/Kurogane/Scenes/Inicio.unity` (**Kurogane → Abrir escena Inicio**; si no existe, la crea).
+4. Pulsa **Play**: en el garaje eliges pista, sentido, coche y opciones, y **Empezar** carga la pista con una pantalla de carga.
+
+También se puede pulsar Play directamente en la escena de una pista (`Pista_<id>.unity`): sale el menú de siempre en la salida, útil para probar.
+
+### Pistas
+
+Cada pista es un asset `TrackDefinition` (nombre, nombre en japonés, descripción, ambiente y lista de tramos) con su escena `Pista_<id>.unity`. La lista del menú está en `Assets/Kurogane/Resources/Pistas.asset`.
+
+- **Tramos**: recta, curva, horquilla y ese (dos curvas encadenadas). Cada tramo puede llevar su propio medio ancho y su pendiente, ir en túnel o ser un puente (sin terreno debajo y con barandilla a los dos lados).
+- **Ambiente** (`EnvironmentTheme`): vegetación (cedros, hoja ancha o arces de otoño), muros (hormigón, roca o piedra), densidad de faroles (0 = solo los faros), color del guardarraíl, cordilleras y ciudad lejana del horizonte, pueblo del pie y clima de la opción **Según la pista**.
+- **Subida**: la misma carretera al revés. Sale de la pancarta de meta de bajada, encima del pueblo, y llega unos 140 m antes de la cima, donde está la pancarta de meta de subida (solo se ve subiendo). El rival acelera menos y puede frenar más tarde. Los récords van por pista, sentido, modo y coche; los de la bajada del Monte Kurogane conservan su archivo de antes.
+- **Kurogane → Pistas** abre la herramienta: mapa desde arriba, perfil de altitud, ficha y avisos si la pista se cruza consigo misma o si dos tramos pasan a menos de 4 m entre bordes. **Crear escena y hornear** crea `Pista_<id>.unity`, la añade al catálogo y a la lista de compilación, y hornea la geometría y las luces.
+
+Para crear una pista: **Assets → Create → Kurogane → Track Definition** (o **Nueva pista** en la herramienta), rellena los tramos, revísala en la ventana y pulsa **Crear escena y hornear**.
 
 ### URP (opcional en la Fase 1)
 
@@ -67,9 +80,9 @@ Al llegar a meta la bajada recibe una nota sobre 100:
 
 - **Filtro PS2** (componente `PS2Filter` en la cámara): la escena se dibuja a 448 líneas, como la PS2 en NTSC, y se le aplica estela entre cuadros, brillo, tramado Bayer y color de 16 bits (5-6-5). Todo se ajusta en el inspector y se apaga desde el menú. Funciona con URP y con el pipeline integrado.
 - **Motores por código** (`EngineSynth` + `CarAudio` en cada coche): cada coche tiene su tipo de motor (Panda 4 cilindros, Coupé rotativo, Sedán 6 cilindros), con silbido y descarga del turbo, petardeo al soltar el gas, chirrido de ruedas en el derrape y golpes contra el muro. El rival suena según la distancia y el lado.
-- **Música**: el juego no trae pistas. Pon las tuyas (con licencia) en `Assets/Kurogane/Audio/Musica` y vuelve a ejecutar **Kurogane → Crear escena de prueba**.
+- **Música**: el juego no trae pistas. Pon las tuyas (con licencia) en `Assets/Kurogane/Audio/Musica` y vuelve a crear las escenas (**Kurogane → Crear escena Inicio** y **Crear escena y hornear** en **Kurogane → Pistas**).
 
-Si la escena se creó antes de la Fase 4, ejecuta otra vez **Kurogane → Crear escena de prueba** para añadir el filtro, el sonido y la música.
+Las escenas creadas por el menú ya traen el filtro, el sonido y la música.
 
 ### Cielo y horizonte
 
@@ -155,27 +168,31 @@ En ninguna escena hubo cuadros por encima de 16,8 ms.
 ```
 Assets/Kurogane/
   Scripts/
-    Track/    TrackDefinition (trazado editable), TrackData (cálculo de la pista y el terreno), TrackBuilder (mallas, señales y público), CrowdFlashes
+    Track/    TrackDefinition (trazado y ficha), EnvironmentTheme (ambiente), TrackCatalog (lista de pistas), TrackData (pista
+              y terreno, también de subida), TrackBuilder (mallas, señales y público), TrackPreview (mapa, perfil y avisos), CrowdFlashes
     Cars/     CarSpec, CarController (física arcade), RivalAI, CarModelBuilder, CarVisual,
               TrafficModels, TrafficCar, TrafficManager, ICarObstacle
     Camera/   ChaseCamera (persecución y cámara de garaje)
     Race/     RaceManager (cuenta atrás, puntos, vaso, sectores, récords),
               RaceManager.Menu (menú, opciones, pausa, nota final), RaceManager.Arrival (llegada al pueblo),
-              RaceSettings (opciones guardadas)
+              RaceManager.Tracks (pista y sentido), RaceSettings (opciones guardadas), GameSession y SceneLoader
+              (cambio de escena con pantalla de carga), Garage (garaje de la escena Inicio)
     Hud/      HudView (HUD y caja de cambios), MenuView (menús, pausa, resultados), TouchControls, UiKit
     Controls/ DriverInput (teclado, mando y táctil)
     Core/     MaterialFactory, ProceduralTextures, MeshKit, DetailCulling
     Environment/ SkyDome (cielo, luna, cordilleras y luces del valle), WeatherProfile, WeatherSystem,
               RainFx, RainAudio, WheelSpray (namespace Kurogane.Atmosphere)
-    City/     CityBuilder (pueblo de la meta y ciudad del valle), CityStyle, CityProps (atlas y Blinker)
+    City/     CityBuilder (pueblo de la meta y ciudad del valle), CityStyle, Blinker, CrossingController
     Retro/    PS2Filter (imagen a baja resolución, estela, brillo, tramado, 16 bits)
     Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer
   Shaders/    PS2Filter.shader, Sky.shader
   Audio/      Musica/ (pistas propias, ver LEEME.txt)
-  Editor/     Menú "Kurogane": crear escena (KuroganeSceneSetup), hornear (KuroganeBake) y compilar (KuroganeBuild)
+  Editor/     Menú "Kurogane": escenas (KuroganeSceneSetup), herramienta de pistas (KuroganeTrackTools),
+              hornear (KuroganeBake) y compilar (KuroganeBuild)
   Baked/      Pista horneada e iluminación (los genera el menú)
   Data/       Assets de pista y coches (los genera el menú)
-  Scenes/     Escenas
+  Scenes/     Inicio (menú y garaje) y Pista_<id> (una por pista)
+  Resources/  Pistas (catálogo de pistas del menú)
 ```
 
 La física, el rival y el cálculo de la pista son un port directo del prototipo web, con los mismos números. Convención de ejes: rumbo 0 = +Z, positivo = giro a la derecha, y el lateral positivo es la derecha.
@@ -192,6 +209,7 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | ✅ |
 | 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | ✅ (falta medir en un Android real) |
 | 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | ✅ |
+| E | Varias pistas: escena Inicio, una escena por pista, subida, ambiente por pista y herramienta de pistas (`docs/plan-pistas-modo-libre.md`) | 🧪 en revisión |
 
 ## Compilar
 

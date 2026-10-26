@@ -23,6 +23,10 @@ namespace Kurogane.Race
     public partial class RaceManager : MonoBehaviour
     {
         [Header("Escena")]
+        [Tooltip("Escena Inicio: solo menú y garaje, sin pista. Empezar carga la escena de la pista elegida.")]
+        public bool frontEnd;
+        [Tooltip("Garaje de la escena Inicio (donde se aparca el coche en el menú).")]
+        public Garage garage;
         public TrackBuilder track;
         public CarController player;
         public RivalAI rival;
@@ -31,6 +35,11 @@ namespace Kurogane.Race
         [Header("Coches")]
         public CarSpec[] cars;
         public int selectedCar;
+
+        [Header("Pista")]
+        [Tooltip("Pista elegida en el menú (id de su TrackDefinition). En la escena de una pista, al arrancar es la suya.")]
+        public string trackId = "";
+        public TrackDirection direction = TrackDirection.Bajada;
 
         [Header("Opciones")]
         public RaceMode mode = RaceMode.Batalla;
@@ -48,8 +57,8 @@ namespace Kurogane.Race
         [Range(0, 10)] public int musicVolume = 6;
 
         [Header("Clima")]
-        [Tooltip("0 Despejado, 1 Amanecer, 2 Atardecer, 3 Niebla, 4 Lluvia, 5 Al azar (cambia en cada bajada).")]
-        [Range(0, 5)] public int weather;
+        [Tooltip("0 Despejado, 1 Amanecer, 2 Atardecer, 3 Niebla, 4 Lluvia, 5 Al azar (cambia en cada bajada), 6 Según la pista.")]
+        [Range(0, 6)] public int weather;
         WeatherSystem weatherSystem;
         WeatherKind randomWeather;
 
@@ -60,9 +69,7 @@ namespace Kurogane.Race
         bool MountainTraffic => traffic == 1 || (traffic == 0 && mode == RaceMode.Contrarreloj);
 
         [Header("Nota final")]
-        [Tooltip("Tiempo de referencia (s): bajar en este tiempo da 30 de los 40 puntos de tiempo; cada segundo menos suma 1.")]
-        public float parTime = 120;
-        [Tooltip("Puntos de drift que dan los 15 puntos de estilo.")]
+        [Tooltip("Puntos de drift que dan los 15 puntos de estilo. El tiempo de referencia es de cada pista (TrackDefinition.parTime).")]
         public int driftPar = 8000;
 
         public RaceState State { get; private set; }
@@ -99,13 +106,32 @@ namespace Kurogane.Race
         void Awake()
         {
             if (cars == null || cars.Length == 0) cars = new[] { CarSpec.CreatePanda(), CarSpec.CreateCoupe(), CarSpec.CreateSedan() };
-            if (showMenuOnStart) RaceSettings.Load(this);
+            if (showMenuOnStart || frontEnd) RaceSettings.Load(this);
             ApplyOptions();
             ApplyDisplay(true);
             Ensure<HudView>();
             Ensure<MenuView>();
             Ensure<TouchControls>();
+            // Benchmark para el móvil (ver Benchmark.cs): desde Inicio lo corre la primera pista, de bajada
+            bool bench = GameSession.Benchmark || Benchmark.Requested();
+            GameSession.Benchmark = false;
+            if (frontEnd)
+            {
+                if (SelectedTrack != null) trackId = SelectedTrack.Id;
+                if (bench)
+                {
+                    GameSession.Benchmark = true;
+                    direction = TrackDirection.Bajada;
+                    LoadSelectedTrack();
+                }
+                return;
+            }
+
+            // La escena es de una pista: la elegida pasa a ser la suya, en el sentido elegido si lo permite
             track.Build();
+            trackId = track.definition.Id;
+            if (bench) direction = TrackDirection.Bajada;
+            ApplyDirection();
             // Escenas creadas antes del cielo (bloque A) no lo traen: se añade uno al arrancar
             if (FindAnyObjectByType<SkyDome>() == null) new GameObject("Cielo").AddComponent<SkyDome>();
             Ensure<WeatherSystem>();
@@ -115,14 +141,13 @@ namespace Kurogane.Race
 
             Ensure<TrafficManager>();
             trafficManager = GetComponent<TrafficManager>();
-            trafficManager.Init(player, track.Data, track.Root, () => State == RaceState.Racing);
-            // El paso a nivel no se cierra mientras el jugador cruza el pueblo en la llegada
+            trafficManager.Init(player, track, () => State == RaceState.Racing);
+            // El paso a nivel no se cierra mientras el jugador cruza el pueblo en la llegada (subiendo no lo cruza)
             var crossing = track.Root != null ? track.Root.GetComponentInChildren<Kurogane.City.CrossingController>(true) : null;
             if (crossing != null)
-                crossing.allowed = () => player.Index < track.Data.FinishIndex - 40 || player.Speed < 1 || State == RaceState.Menu;
+                crossing.allowed = () => track.Data.Uphill || player.Index < track.Data.FinishIndex - 40 || player.Speed < 1 || State == RaceState.Menu;
 
-            // Benchmark para el móvil (ver Benchmark.cs)
-            if (Benchmark.Requested()) gameObject.AddComponent<Benchmark>();
+            if (bench) gameObject.AddComponent<Benchmark>();
             player.WallHit += OnWallHit;
             player.RivalContact += v => { Water = Mathf.Max(0, Water - v * 0.8f); chaseCamera.Shake(0.4f); };
         }
@@ -131,7 +156,8 @@ namespace Kurogane.Race
         void ApplyWeather(bool reroll)
         {
             if (weatherSystem == null) return;
-            if (weather >= 5)
+            if (weather == 6) weatherSystem.Apply(track.Theme != null ? track.Theme.defaultWeather : WeatherKind.Despejado);
+            else if (weather >= 5)
             {
                 if (reroll) randomWeather = (WeatherKind)Random.Range(0, 5);
                 weatherSystem.Apply(randomWeather);
@@ -146,16 +172,29 @@ namespace Kurogane.Race
 
         void Start()
         {
-            if (showMenuOnStart) OpenMenu();
+            if (frontEnd) { OpenMenu(); return; }
+            // Cargada desde el menú (Inicio u otra pista): se empieza ya
+            if (GameSession.StartRaceOnLoad) { GameSession.StartRaceOnLoad = false; StartRace(); }
+            else if (showMenuOnStart) OpenMenu();
             else StartRace();
+        }
+
+        /// <summary>Pone la pista en el sentido elegido (subida solo si la pista lo permite).</summary>
+        void ApplyDirection()
+        {
+            if (track == null || track.definition == null) return;
+            if (!track.definition.allowUphill) direction = TrackDirection.Bajada;
+            track.Direction = direction;
+            track.ApplyDirection();
         }
 
         public void StartRace()
         {
+            if (frontEnd) { LoadSelectedTrack(); return; }
             Time.timeScale = 1;
             var data = track.Data;
             var ps = PlayerSpec;
-            player.Init(data, ps, 5, -2.2f);
+            player.Init(data, ps, data.RaceStart, -2.2f);
             player.manualGearbox = manualGearbox;
             player.ControlsEnabled = false;
             player.AutoBrake = false;
@@ -169,7 +208,7 @@ namespace Kurogane.Race
                 rival.skill = rivalSkill;
                 rival.Player = player;
                 rival.Clock = () => RaceTime;
-                rival.Init(data, RivalSpec, 28);
+                rival.Init(data, RivalSpec, data.RaceStart * data.Step + 18);
                 rival.Running = false;
                 rival.GetComponent<CarVisual>().Build(RivalSpec);
             }
@@ -203,6 +242,7 @@ namespace Kurogane.Race
 
         void Update()
         {
+            if (SceneLoader.Busy) return;
             if (State == RaceState.Menu) { MenuInput(); return; }
             if (State == RaceState.Paused) { PauseInput(); return; }
             // El estado va primero: leer Pause consume la pulsación táctil
@@ -257,9 +297,8 @@ namespace Kurogane.Race
                     else if (DriverInput.Pause) OpenMenu();
                     break;
             }
-            // Cerca de la meta se alarga el plano lejano para ver la ciudad del valle
-            var td = track.Data;
-            chaseCamera.farBlend = Mathf.InverseLerp(td.FinishIndex - 150, td.FinishIndex - 20, player.Index);
+            // Cerca del pueblo se alarga el plano lejano para ver la ciudad del valle
+            chaseCamera.farBlend = track.Data.TownView(player.Index);
         }
 
         void Scoring(float dt)
@@ -350,7 +389,23 @@ namespace Kurogane.Race
 
         // ---------- Récords (JSON en persistentDataPath) ----------
 
-        string BestPath => Path.Combine(Application.persistentDataPath, $"best_{mode}_{PlayerSpec.model}.json");
+        /// <summary>
+        /// Un récord por pista, sentido, modo y coche. La bajada del Monte Kurogane conserva el nombre de antes de
+        /// las pistas, así sus récords siguen valiendo.
+        /// </summary>
+        string BestPath
+        {
+            get
+            {
+                var def = SelectedTrack;
+                string id = def != null ? def.Id : "MonteKurogane";
+                var dir = EffectiveDirection;
+                string file = id == "MonteKurogane" && dir == TrackDirection.Bajada
+                    ? $"best_{mode}_{PlayerSpec.model}.json"
+                    : $"best_{id}_{dir}_{mode}_{PlayerSpec.model}.json";
+                return Path.Combine(Application.persistentDataPath, file);
+            }
+        }
 
         BestRecord LoadBest()
         {

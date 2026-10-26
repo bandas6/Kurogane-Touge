@@ -58,7 +58,8 @@ namespace Kurogane.CameraRig
 
         void LateUpdate()
         {
-            if (target == null || target.Track == null) return;
+            // Sin pista solo hay garaje (escena Inicio)
+            if (target == null || (target.Track == null && !showroom)) return;
             float dt = Time.deltaTime;
             var car = target.transform.position;
             float h = target.Heading, sp = target.Speed;

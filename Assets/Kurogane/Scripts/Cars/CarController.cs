@@ -88,6 +88,22 @@ namespace Kurogane.Cars
             shiftTimer = 0;
         }
 
+        /// <summary>Aparca el coche fuera de cualquier pista (garaje de la escena Inicio): sin pista no hay física.</summary>
+        public void Park(CarSpec carSpec, Vector3 position, float heading)
+        {
+            Track = null;
+            spec = carSpec;
+            transform.SetPositionAndRotation(position, Quaternion.Euler(0, heading * Mathf.Rad2Deg, 0));
+            Heading = heading;
+            vx = vz = 0;
+            Index = 0;
+            Gear = 0;
+            Rpm = 1000;
+            Steer = Slip = 0;
+            Drifting = InGutter = false;
+            accX = accZ = 0;
+        }
+
         /// <summary>Vuelve al centro de la calzada en el punto actual (tecla R).</summary>
         public void Respawn() => ResetTo(Index, 0);
 
@@ -183,7 +199,7 @@ namespace Kurogane.Cars
             var pos = transform.position;
             float dlat = Track.Lateral(Index, pos);
             int gs = Track.GutterSide[Index];
-            bool inGut = ControlsEnabled && gs != 0 && dlat * gs > Track.W - 1.75f && fsp > 7;
+            bool inGut = ControlsEnabled && gs != 0 && dlat * gs > Track.HW[Index] - 1.75f && fsp > 7;
 
             // Giro
             float yaw = Steer * spec.yawRate * Mathf.Min(1, fsp / 6) / (1 + fsp / 30);
@@ -230,7 +246,7 @@ namespace Kurogane.Cars
             var p = Track.P[Index];
             float d = Track.Lateral(Index, pos);
             int sd = d >= 0 ? 1 : -1;
-            float lim = Track.GutterSide[Index] == sd ? Track.W - 0.6f : Track.W - 0.95f;
+            float lim = Track.GutterSide[Index] == sd ? Track.HW[Index] - 0.6f : Track.HW[Index] - 0.95f;
             float along = (pos.x - p.pos.x) * p.forward.x + (pos.z - p.pos.z) * p.forward.z;
             var next = Track.P[Mathf.Min(Track.N - 1, Index + 1)];
             pos.y = Mathf.Lerp(p.pos.y, next.pos.y, Mathf.Clamp01(along / Track.Step)) - (inGut ? 0.06f : 0);

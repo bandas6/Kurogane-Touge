@@ -22,6 +22,8 @@ namespace Kurogane.Cars
         public float townLane = 2.4f;
 
         CarController player;
+        TrackBuilder track;
+        /// <summary>Pista de bajada: el tráfico va sobre ella sea cual sea el sentido de la carrera.</summary>
         TrackData data;
         CrossingController crossing;
         System.Func<bool> racing;
@@ -31,10 +33,12 @@ namespace Kurogane.Cars
 
         public IReadOnlyList<TrafficCar> MountainCars => mountain;
 
-        public void Init(CarController playerCar, TrackData track, Transform parent, System.Func<bool> isRacing)
+        public void Init(CarController playerCar, TrackBuilder trackBuilder, System.Func<bool> isRacing)
         {
             player = playerCar;
-            data = track;
+            track = trackBuilder;
+            data = track.Geometry;
+            var parent = track.Root;
             racing = isRacing;
             crossing = parent != null ? parent.GetComponentInChildren<CrossingController>(true) : null;
             if (crossing != null) crossingDistance = crossing.trackDistance;
@@ -92,22 +96,26 @@ namespace Kurogane.Cars
         {
             if (player == null || data == null) return;
 
-            // Montaña
+            // Montaña: en sentido contrario al jugador. Bajando, suben (-1) por su izquierda (+lateral); subiendo, bajan
+            // (+1) por la suya (-lateral). Todo en índices de la pista de bajada
+            var race = track.Data;
+            int dir = race.Uphill ? 1 : -1;
+            int at0 = race.ToGeometry(player.Index), goal = race.ToGeometry(race.FinishIndex);
             bool on = mountainTraffic && racing != null && racing();
             foreach (var c in mountain)
-                if (c.gameObject.activeSelf && (!on || c.Index < player.Index - 30 || c.Distance <= 1)) Despawn(c);
+                if (c.gameObject.activeSelf && (!on || (c.Index - at0) * dir > 30 || c.Distance <= 1 || c.Distance >= data.Length - 2)) Despawn(c);
             if (on)
             {
                 spawnTimer -= Time.deltaTime;
                 if (spawnTimer <= 0)
                 {
                     spawnTimer = Random.Range(7f, 16f);
-                    int at = player.Index + Random.Range(150, 200); // unos 300-400 m por delante: fuera de la vista
-                    if (at < data.FinishIndex)
+                    int at = at0 - dir * Random.Range(150, 200); // unos 300-400 m por delante: fuera de la vista
+                    if (race.Uphill ? at > goal : at < goal)
                         foreach (var c in mountain)
                             if (!c.gameObject.activeSelf)
                             {
-                                c.Init(data, at * data.Step, -1, mountainLane, Random.Range(10f, 13f));
+                                c.Init(data, at * data.Step, dir, -dir * mountainLane, Random.Range(10f, 13f));
                                 c.gameObject.SetActive(true);
                                 player.Obstacles.Add(c);
                                 break;

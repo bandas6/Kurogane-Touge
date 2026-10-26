@@ -27,7 +27,7 @@ namespace Kurogane.Track
 
         void BuildSigns()
         {
-            var d = Data;
+            var d = Geometry;
             var quad = Primitive(PrimitiveType.Quad);
             var cyl = Primitive(PrimitiveType.Cylinder);
             var poles = new List<Matrix4x4>();
@@ -47,7 +47,7 @@ namespace Kurogane.Track
                 for (int i = hp.start; i <= hp.end; i += 5)
                 {
                     var p = d.P[i];
-                    var foot = d.At(i, outer, d.W + 0.95f, p.pos.y - 0.1f);
+                    var foot = d.At(i, outer, d.HW[i] + 0.95f, p.pos.y - 0.1f);
                     Sign(left ? chevronLeft : chevronRight, poles, backs, foot, p.forward, 1.1f, new Vector2(0.6f, 0.75f));
                 }
 
@@ -56,7 +56,7 @@ namespace Kurogane.Track
                 if (w > 2)
                 {
                     var p = d.P[w];
-                    var foot = d.At(w, LowSide(w), d.W + 0.95f, p.pos.y - 0.1f);
+                    var foot = d.At(w, LowSide(w), d.HW[w] + 0.95f, p.pos.y - 0.1f);
                     Sign(left ? warnLeft : warnRight, poles, backs, foot, p.forward, 2.1f, new Vector2(0.95f, 0.95f));
                 }
             }
@@ -66,7 +66,7 @@ namespace Kurogane.Track
             {
                 if (i < 2 || i >= d.FinishIndex) continue;
                 var p = d.P[i];
-                Sign(speed, poles, backs, d.At(i, LowSide(i), d.W + 0.95f, p.pos.y - 0.1f), p.forward, 2.1f, new Vector2(0.75f, 0.75f));
+                Sign(speed, poles, backs, d.At(i, LowSide(i), d.HW[i] + 0.95f, p.pos.y - 0.1f), p.forward, 2.1f, new Vector2(0.75f, 0.75f));
             }
 
             AddCombined("Chevrons", quad, chevronLeft, MaterialFactory.Sign(ProceduralTextures.Chevron(true)), detailDistance);
@@ -82,7 +82,7 @@ namespace Kurogane.Track
         }
 
         /// <summary>Lado con el muro más bajo en el punto i: ahí se planta la señal, en el borde del arcén.</summary>
-        int LowSide(int i) => Data.WallHeight(i, 1) <= Data.WallHeight(i, -1) ? 1 : -1;
+        int LowSide(int i) => Geometry.WallHeight(i, 1) <= Geometry.WallHeight(i, -1) ? 1 : -1;
 
         /// <summary>
         /// Placa mirando al coche que llega (el Quad de Unity se ve desde -Z), su reverso gris y el poste.
@@ -100,7 +100,7 @@ namespace Kurogane.Track
         /// <summary>Postes kilométricos cada 500 m. Cada número es una textura propia, así que van sueltos.</summary>
         void BuildKmPosts(Mesh quad, Mesh cyl)
         {
-            var d = Data;
+            var d = Geometry;
             var white = MaterialFactory.Lit(new Color(0.9f, 0.9f, 0.88f), null, 0.2f);
             int every = Mathf.RoundToInt(500 / d.Step);
             for (int i = every; i < d.FinishIndex; i += every)
@@ -108,7 +108,7 @@ namespace Kurogane.Track
                 if (d.InTunnel(i)) continue;
                 var p = d.P[i];
                 string km = (i * d.Step / 1000f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
-                var foot = d.At(i, LowSide(i), d.W + 0.95f, p.pos.y - 0.1f);
+                var foot = d.At(i, LowSide(i), d.HW[i] + 0.95f, p.pos.y - 0.1f);
                 var face = Add("KmPost", quad, MaterialFactory.Sign(ProceduralTextures.KmPost(km)));
                 face.transform.SetPositionAndRotation(foot + Vector3.up * 0.75f, Quaternion.LookRotation(p.forward));
                 face.transform.localScale = new Vector3(0.32f, 0.48f, 1);
@@ -123,7 +123,7 @@ namespace Kurogane.Track
         /// <summary>Rótulo con el nombre del túnel sobre la boca de entrada.</summary>
         void BuildTunnelPlate(Mesh quad)
         {
-            var d = Data;
+            var d = Geometry;
             if (d.TunnelStart < 2) return;
             var p = d.P[d.TunnelStart - 2];
             var plate = Add("TunnelPlate", quad, MaterialFactory.Sign(ProceduralTextures.TunnelPlate("KUROGANE"), false, 0.5f));
@@ -135,7 +135,7 @@ namespace Kurogane.Track
 
         void BuildCrowd()
         {
-            var d = Data;
+            var d = Geometry;
             var cube = Primitive(PrimitiveType.Cube);
             var sphere = Primitive(PrimitiveType.Sphere);
             var quad = Primitive(PrimitiveType.Quad);
@@ -155,7 +155,7 @@ namespace Kurogane.Track
                 {
                     int i = m + r.Next(-12, 13);
                     if (i < 0 || i >= d.N || d.Platform(i, outer) < 0.6f) continue;
-                    float lat = d.W + 2.2f + (float)r.NextDouble() * 4.6f;
+                    float lat = d.HW[i] + 2.2f + (float)r.NextDouble() * 4.6f;
                     var pos = d.At(i, outer, lat, 0);
                     pos.y = d.TerrainY(i, outer, lat);
                     var facing = Spectator(pos, d.P[i].pos, r, jackets, pants, heads);
@@ -209,14 +209,14 @@ namespace Kurogane.Track
         /// </summary>
         void BuildParkedCars()
         {
-            var d = Data;
+            var d = Geometry;
             var r = new System.Random(seed + 11);
             int n = 0;
             foreach (var hp in d.Hairpins)
             {
                 int outer = -(int)Mathf.Sign(hp.angle), i = (hp.start + hp.end) / 2 + 10;
                 if (i >= d.N || d.Platform(i, outer) < 0.6f) continue;
-                float lat = d.W + 3.4f;
+                float lat = d.HW[i] + 3.4f;
                 var pos = d.At(i, outer, lat, 0);
                 pos.y = d.TerrainY(i, outer, lat);
                 var model = n++ % 2 == 0 ? Kurogane.Cars.TrafficModel.Kei : Kurogane.Cars.TrafficModel.Furgoneta;

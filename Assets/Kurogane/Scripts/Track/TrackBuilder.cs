@@ -33,7 +33,16 @@ namespace Kurogane.Track
         [Tooltip("Distancia a la que se apagan las luces de faroles y túnel (más su alcance).")]
         public float lightDistance = 90;
 
-        public TrackData Data { get; private set; }
+        /// <summary>Pista de bajada: con ella se construyen las mallas, el pueblo y el tráfico.</summary>
+        public TrackData Geometry { get; private set; }
+        /// <summary>Sentido en que se corre. Lo fija el RaceManager; no cambia la geometría.</summary>
+        public TrackDirection Direction { get; set; }
+        /// <summary>Pista en el sentido de la carrera: la usan el coche, el rival, la cámara y la carrera.</summary>
+        public TrackData Data => Geometry != null && Direction == TrackDirection.Subida && definition.allowUphill ? Geometry.Reversed() : Geometry;
+        /// <summary>Ambiente de la pista (o null: el del Monte Kurogane).</summary>
+        public EnvironmentTheme Theme => definition != null ? definition.theme : null;
+
+        public const string StartBanner = "PancartaSalida", GoalBanner = "PancartaMeta", UphillGoalBanner = "PancartaMetaSubida";
 
         Transform root;
         System.Random rng;
@@ -48,9 +57,9 @@ namespace Kurogane.Track
 
         public void Build()
         {
-            if (Data != null) return;
+            if (Geometry != null) return;
             if (definition == null) definition = ScriptableObject.CreateInstance<TrackDefinition>();
-            Data = new TrackData(definition);
+            Geometry = new TrackData(definition);
             culling = GetComponent<DetailCulling>();
             if (culling == null) culling = gameObject.AddComponent<DetailCulling>();
 
@@ -59,6 +68,7 @@ namespace Kurogane.Track
             {
                 root = existing;
                 RegisterBakedDetail();
+                ApplyDirection();
                 return;
             }
             if (existing != null)
@@ -70,8 +80,8 @@ namespace Kurogane.Track
             root = new GameObject(RootName).transform;
             root.SetParent(transform, false);
 
-            var d = Data;
-            float W = d.W;
+            var d = Geometry;
+            var theme = Theme;
 
             // Calzada
             // Brillo bajo en seco para que la máscara de charcos no se note; la lluvia lo sube (WeatherSystem)
@@ -79,7 +89,7 @@ namespace Kurogane.Track
             AddRibbon("Road", d.N, i =>
             {
                 var p = d.P[i];
-                return (p.pos - p.right * W, p.pos + p.right * W, 0, 1, i * d.Step / 16f);
+                return (p.pos - p.right * d.HW[i], p.pos + p.right * d.HW[i], 0, 1, i * d.Step / 16f);
             }, road);
 
             // Canaletas en el interior de las horquillas
@@ -91,47 +101,106 @@ namespace Kurogane.Track
                 {
                     int i = a + j;
                     var p = d.P[i];
-                    var inner = p.pos + p.right * (W - 0.7f) * s + Vector3.up * 0.015f;
-                    var outer = p.pos + p.right * (W - 0.05f) * s + Vector3.up * 0.015f;
+                    var inner = p.pos + p.right * (d.HW[i] - 0.7f) * s + Vector3.up * 0.015f;
+                    var outer = p.pos + p.right * (d.HW[i] - 0.05f) * s + Vector3.up * 0.015f;
                     return s > 0 ? (inner, outer, 0, 1, i * d.Step / 2f) : (outer, inner, 0, 1, i * d.Step / 2f);
                 }), grate);
             }
 
-            // Arcén, muro de contención y ladera a cada lado
+            // Arcén, muro de contención y ladera a cada lado (en los puentes no hay muro ni ladera)
             var gravel = MaterialFactory.Lit(Color.white, ProceduralTextures.Gravel(), 0.05f).DoubleSided();
-            var wall = MaterialFactory.Lit(Color.white, ProceduralTextures.RetainingWall(), 0.05f).DoubleSided();
+            var wallStyle = theme != null ? theme.walls : WallStyle.Hormigon;
+            var wallTex = wallStyle == WallStyle.Roca ? ProceduralTextures.RockWall()
+                : wallStyle == WallStyle.Piedra ? ProceduralTextures.StoneWall() : ProceduralTextures.RetainingWall();
+            var wall = MaterialFactory.Lit(Color.white, wallTex, 0.05f).DoubleSided();
             var grass = MaterialFactory.Lit(Color.white, ProceduralTextures.Grass(), 0.02f).DoubleSided();
-            var rail = MaterialFactory.Lit(Color.white, ProceduralTextures.GuardRail(), 0.5f);
+            var rail = MaterialFactory.Lit(theme != null ? theme.railColor : Color.white, ProceduralTextures.GuardRail(), 0.5f);
+            bool bridges = System.Array.IndexOf(d.Bridge, true) >= 0;
+            System.Func<int, bool> ground = bridges ? i => !d.Bridge[i] : (System.Func<int, bool>)null;
             foreach (int s in new[] { -1, 1 })
             {
                 AddRibbon("Shoulder", d.N, SideStrip(s, 0, 1, 1, 3), gravel);
-                AddRibbon("Wall", d.N, SideStrip(s, 1, 2, 3, 6), wall);
-                AddRibbon("Slope", d.N, SideStrip(s, 2, 3, 6, 6), grass);
+                AddRibbon("Wall", d.N, SideStrip(s, 1, 2, 3, 6), wall, ground);
+                AddRibbon("Slope", d.N, SideStrip(s, 2, 3, 6, 6), grass, ground);
                 int side = s;
                 AddRibbon("GuardRail", d.N, i =>
                 {
                     var p = d.P[i];
-                    var b = p.pos + p.right * (W + 0.45f) * side;
+                    var b = p.pos + p.right * (d.HW[i] + 0.45f) * side;
                     return (b + Vector3.up * 0.45f, b + Vector3.up * 0.82f, 0, 1, 0);
                 }, rail, i => d.HasRail(i, side), true);
             }
+            if (bridges) BuildBridges();
 
             BuildPosts();
             BuildLamps();
             BuildTunnel();
             BuildForest();
-            BuildBanner(8, new Color(0.72f, 0.07f, 0.16f));
-            BuildBanner(d.FinishIndex + 1, new Color(0.11f, 0.16f, 0.5f));
+            BuildBanner(StartBanner, 8, new Color(0.72f, 0.07f, 0.16f));
+            BuildBanner(GoalBanner, d.FinishIndex + 1, new Color(0.11f, 0.16f, 0.5f));
+            if (definition.allowUphill) BuildBanner(UphillGoalBanner, d.UphillGoal - 1, new Color(0.11f, 0.16f, 0.5f));
             BuildSigns();
             BuildCrowd();
             BuildParkedCars();
-            if (d.TownStart < d.N) new Kurogane.City.CityBuilder(this, cityStyle).Build();
+            var style = theme != null && theme.cityStyle != null ? theme.cityStyle : cityStyle;
+            if (d.HasTown) new Kurogane.City.CityBuilder(this, style).Build();
+            ApplyDirection();
+        }
+
+        /// <summary>
+        /// Pancartas según el sentido: la meta de subida solo se ve subiendo. La pancarta de meta de bajada es la
+        /// salida de subida. Se llama al construir y cada vez que el RaceManager cambia el sentido.
+        /// </summary>
+        public void ApplyDirection()
+        {
+            if (root == null) return;
+            bool up = Data != null && Data.Uphill;
+            foreach (Transform t in root)
+                if (t.name == UphillGoalBanner) t.gameObject.SetActive(up);
+        }
+
+        /// <summary>
+        /// Tablero de hormigón bajo los tramos de puente (cantos y fondo) y pilares cada 24 m hasta 40 m de profundidad.
+        /// La barandilla es el guardarraíl, que en los puentes va a los dos lados.
+        /// </summary>
+        void BuildBridges()
+        {
+            var d = Geometry;
+            var concrete = MaterialFactory.Lit(new Color(0.5f, 0.49f, 0.46f), null, 0.05f).DoubleSided();
+            var cube = Primitive(PrimitiveType.Cube);
+            var pillars = new List<Matrix4x4>();
+            const float depth = 1.4f;
+            System.Func<int, bool> on = i => d.Bridge[i];
+            foreach (int s in new[] { -1, 1 })
+            {
+                int side = s;
+                AddRibbon("BridgeDeck", d.N, i =>
+                {
+                    var p = d.P[i];
+                    var e = p.pos + p.right * (d.HW[i] + 0.9f) * side;
+                    return (e - Vector3.up * depth, e - Vector3.up * 0.1f, 0, 1, i * d.Step / 4f);
+                }, concrete, on, true);
+            }
+            AddRibbon("BridgeDeck", d.N, i =>
+            {
+                var p = d.P[i];
+                float w = d.HW[i] + 0.9f;
+                return (p.pos + p.right * w - Vector3.up * depth, p.pos - p.right * w - Vector3.up * depth, 0, 1, i * d.Step / 4f);
+            }, concrete, on, true);
+            for (int i = 0; i < d.N; i++)
+            {
+                if (!d.Bridge[i] || i % 12 != 6) continue;
+                var p = d.P[i];
+                pillars.Add(Matrix4x4.TRS(p.pos - Vector3.up * (depth + 20), Quaternion.Euler(0, p.heading * Mathf.Rad2Deg, 0),
+                    new Vector3(d.HW[i] * 1.2f, 40, 1.6f)));
+            }
+            AddCombined("BridgePillars", cube, pillars, concrete);
         }
 
         /// <summary>Vuelve a generar la geometría desde cero (lo usa el horneado en el editor).</summary>
         public void Rebuild()
         {
-            Data = null;
+            Geometry = null;
             baked = false;
             Build();
         }
@@ -168,7 +237,7 @@ namespace Kurogane.Track
 
         System.Func<int, (Vector3, Vector3, float, float, float)> SideStrip(int s, int ra, int rb, float uScale, float vScale)
         {
-            var d = Data;
+            var d = Geometry;
             var rows = new Vector2[4];
             return i =>
             {
@@ -248,7 +317,7 @@ namespace Kurogane.Track
 
         void BuildPosts()
         {
-            var d = Data;
+            var d = Geometry;
             var cube = Primitive(PrimitiveType.Cube);
             var posts = new List<Matrix4x4>();
             var reflectors = new List<Matrix4x4>();
@@ -259,7 +328,7 @@ namespace Kurogane.Track
                 foreach (int s in new[] { -1, 1 })
                 {
                     if (!d.HasRail(i, s)) continue;
-                    var b = p.pos + p.right * (d.W + 0.55f) * s;
+                    var b = p.pos + p.right * (d.HW[i] + 0.55f) * s;
                     posts.Add(Matrix4x4.TRS(b + Vector3.up * 0.42f, Quaternion.identity, new Vector3(0.12f, 0.85f, 0.12f)));
                     if (i % 8 == 0) reflectors.Add(Matrix4x4.TRS(b + Vector3.up * 1.0f, Quaternion.identity, new Vector3(0.1f, 0.14f, 0.06f)));
                 }
@@ -273,14 +342,18 @@ namespace Kurogane.Track
 
         void BuildLamps()
         {
-            var d = Data;
+            var d = Geometry;
             var cube = Primitive(PrimitiveType.Cube);
             var cyl = Primitive(PrimitiveType.Cylinder);
             var poles = new List<Matrix4x4>();
             var arms = new List<Matrix4x4>();
             var heads = new List<Matrix4x4>();
             int n = 0;
-            for (int i = 12; i < d.N; i += 26, n++)
+            // Densidad del tema: 0 = sin faroles (solo los faros), 1 = uno cada 52 m, 2 = el doble
+            float density = Theme != null ? Theme.lampDensity : 1;
+            if (density <= 0.01f) return;
+            int spacing = Mathf.Max(6, Mathf.RoundToInt(26 / density));
+            for (int i = 12; i < d.N; i += spacing, n++)
             {
                 if (d.InTunnel(i) || Mathf.Abs(i - d.TunnelStart) < 10 || Mathf.Abs(i - d.TunnelEnd) < 10) continue;
                 if (i >= d.TownStart - 6) continue; // el pueblo tiene sus propios faroles en los postes
@@ -288,9 +361,9 @@ namespace Kurogane.Track
                 float a = d.WallHeight(i, 1), b = d.WallHeight(i, -1);
                 int s = a < b ? 1 : b < a ? -1 : (n % 2 == 1 ? 1 : -1);
                 var rot = Quaternion.Euler(0, p.heading * Mathf.Rad2Deg + 90, 0);
-                poles.Add(Matrix4x4.TRS(d.At(i, s, d.W + 1.0f, p.pos.y + 3.1f), Quaternion.identity, new Vector3(0.2f, 3.1f, 0.2f)));
-                arms.Add(Matrix4x4.TRS(d.At(i, s, d.W, p.pos.y + 6.15f), rot, new Vector3(0.1f, 0.1f, 2.2f)));
-                var headPos = d.At(i, s, d.W - 0.9f, p.pos.y + 6.05f);
+                poles.Add(Matrix4x4.TRS(d.At(i, s, d.HW[i] + 1.0f, p.pos.y + 3.1f), Quaternion.identity, new Vector3(0.2f, 3.1f, 0.2f)));
+                arms.Add(Matrix4x4.TRS(d.At(i, s, d.HW[i], p.pos.y + 6.15f), rot, new Vector3(0.1f, 0.1f, 2.2f)));
+                var headPos = d.At(i, s, d.HW[i] - 0.9f, p.pos.y + 6.05f);
                 heads.Add(Matrix4x4.TRS(headPos, rot, new Vector3(0.35f, 0.14f, 0.7f)));
                 // Luz real solo en algunos faroles: en móvil cada luz adicional cuesta. La Fase 3 hornea lightmaps.
                 if (n % 2 == 0)
@@ -314,9 +387,9 @@ namespace Kurogane.Track
 
         void BuildTunnel()
         {
-            var d = Data;
+            var d = Geometry;
             if (d.TunnelStart < 0) return;
-            float W = d.W;
+            float W = d.HW[Mathf.Clamp(d.TunnelStart, 0, d.N - 1)];
             var prof = new[]
             {
                 new Vector2(-W - 0.3f, 0), new Vector2(-W - 0.3f, 4.0f), new Vector2(-W + 1.4f, 5.7f), new Vector2(0, 6.3f),
@@ -379,40 +452,64 @@ namespace Kurogane.Track
 
         void BuildForest()
         {
-            var d = Data;
+            var d = Geometry;
             var rows = new Vector2[4];
             var cone = ConeMesh(7);
             var tiers = new[] { new List<Matrix4x4>(), new List<Matrix4x4>(), new List<Matrix4x4>() };
+            var crowns = new[] { new List<Matrix4x4>(), new List<Matrix4x4>(), new List<Matrix4x4>() };
             var trunks = new List<Matrix4x4>();
+            var theme = Theme;
+            var primary = theme != null ? theme.vegetation : Vegetation.Cedros;
+            float mix = theme != null ? theme.mix : 0;
+            int count = Mathf.RoundToInt(treeCount * (theme != null ? theme.treeDensity : 1));
             int tries = 0, placed = 0;
-            while (placed < treeCount && tries++ < treeCount * 6)
+            while (placed < count && tries++ < count * 6)
             {
                 int i = rng.Next(d.N), s = rng.Next(2) == 0 ? -1 : 1;
                 if (Mathf.Abs(i - d.TunnelStart) < 4 || d.InTunnel(i) || i >= d.TownStart - 8) continue;
                 d.Rows(i, s, rows);
                 if (rows[3].x - rows[2].x < 3) continue;
                 float lat = Mathf.Lerp(rows[2].x + 1, rows[3].x - 0.5f, (float)rng.NextDouble());
-                if (d.Platform(i, s) > 0.3f && lat < d.W + 10) continue;
+                if (d.Platform(i, s) > 0.3f && lat < d.HW[i] + 10) continue;
                 var pos = d.At(i, s, lat, 0);
                 bool ok = true;
                 for (int j = 0; j < d.N; j += 3)
                 {
                     float dx = pos.x - d.P[j].pos.x, dz = pos.z - d.P[j].pos.z;
-                    if (dx * dx + dz * dz < (d.W + 3) * (d.W + 3)) { ok = false; break; }
+                    if (dx * dx + dz * dz < (d.HW[j] + 3) * (d.HW[j] + 3)) { ok = false; break; }
                 }
                 if (!ok) continue;
                 pos.y = d.TerrainY(i, s, lat) - 0.2f;
                 float sc = Mathf.Lerp(0.75f, 1.5f, (float)rng.NextDouble()), hs = sc * Mathf.Lerp(0.95f, 1.35f, (float)rng.NextDouble());
                 var rot = Quaternion.Euler(0, (float)rng.NextDouble() * 360, 0);
-                // cedro en tres pisos
-                tiers[0].Add(Matrix4x4.TRS(pos + Vector3.up * 1.1f * hs, rot, new Vector3(3.4f * sc, 4.2f * hs, 3.4f * sc)));
-                tiers[1].Add(Matrix4x4.TRS(pos + Vector3.up * 3.7f * hs, rot, new Vector3(2.5f * sc, 3.4f * hs, 2.5f * sc)));
-                tiers[2].Add(Matrix4x4.TRS(pos + Vector3.up * 6.0f * hs, rot, new Vector3(1.4f * sc, 2.2f * hs, 1.4f * sc)));
-                trunks.Add(Matrix4x4.TRS(pos + Vector3.up * 0.8f * hs, rot, new Vector3(0.4f * sc, 0.8f * hs, 0.4f * sc)));
+                // La mezcla saca otro número al azar solo si hay mezcla: sin tema, el bosque es el mismo de siempre
+                var kind = primary;
+                if (mix > 0 && rng.NextDouble() < mix) kind = primary == Vegetation.Cedros ? Vegetation.HojaAncha : Vegetation.Cedros;
+                if (kind == Vegetation.Cedros)
+                {
+                    // cedro en tres pisos
+                    tiers[0].Add(Matrix4x4.TRS(pos + Vector3.up * 1.1f * hs, rot, new Vector3(3.4f * sc, 4.2f * hs, 3.4f * sc)));
+                    tiers[1].Add(Matrix4x4.TRS(pos + Vector3.up * 3.7f * hs, rot, new Vector3(2.5f * sc, 3.4f * hs, 2.5f * sc)));
+                    tiers[2].Add(Matrix4x4.TRS(pos + Vector3.up * 6.0f * hs, rot, new Vector3(1.4f * sc, 2.2f * hs, 1.4f * sc)));
+                    trunks.Add(Matrix4x4.TRS(pos + Vector3.up * 0.8f * hs, rot, new Vector3(0.4f * sc, 0.8f * hs, 0.4f * sc)));
+                }
+                else
+                {
+                    // hoja ancha o arce: copa redonda en dos bolas sobre un tronco más alto
+                    var crown = crowns[placed % 3];
+                    crown.Add(Matrix4x4.TRS(pos + Vector3.up * 3.6f * hs, rot, new Vector3(4.4f * sc, 3.4f * hs, 4.4f * sc)));
+                    crown.Add(Matrix4x4.TRS(pos + Vector3.up * 5.0f * hs + rot * Vector3.right * 0.9f * sc, rot, new Vector3(2.8f * sc, 2.4f * hs, 2.8f * sc)));
+                    trunks.Add(Matrix4x4.TRS(pos + Vector3.up * 1.3f * hs, rot, new Vector3(0.38f * sc, 1.3f * hs, 0.38f * sc)));
+                }
                 placed++;
             }
             var greens = new[] { new Color(0.09f, 0.16f, 0.09f), new Color(0.11f, 0.19f, 0.1f), new Color(0.13f, 0.22f, 0.12f) };
             for (int t = 0; t < 3; t++) AddCombined("Cedars", cone, tiers[t], MaterialFactory.Lit(greens[t], null, 0));
+            var leaves = primary == Vegetation.ArcesOtono
+                ? new[] { new Color(0.42f, 0.07f, 0.04f), new Color(0.5f, 0.2f, 0.04f), new Color(0.45f, 0.33f, 0.06f) }
+                : new[] { new Color(0.12f, 0.2f, 0.08f), new Color(0.15f, 0.24f, 0.09f), new Color(0.1f, 0.17f, 0.08f) };
+            var sphere = Primitive(PrimitiveType.Sphere);
+            for (int t = 0; t < 3; t++) AddCombined("Leafy", sphere, crowns[t], MaterialFactory.Lit(leaves[t], null, 0));
             AddCombined("Trunks", Primitive(PrimitiveType.Cylinder), trunks, MaterialFactory.Lit(new Color(0.17f, 0.12f, 0.09f)));
         }
 
@@ -445,17 +542,18 @@ namespace Kurogane.Track
             return m;
         }
 
-        void BuildBanner(int i, Color color)
+        void BuildBanner(string name, int i, Color color)
         {
-            var d = Data;
+            var d = Geometry;
+            i = Mathf.Clamp(i, 0, d.N - 1);
             var p = d.P[i];
-            var g = new GameObject("Banner").transform;
+            var g = new GameObject(name).transform;
             g.SetParent(root, false);
             g.SetPositionAndRotation(p.pos, Quaternion.Euler(0, p.heading * Mathf.Rad2Deg, 0));
             var metal = MaterialFactory.Lit(new Color(0.33f, 0.36f, 0.4f));
-            Block(g, new Vector3(0, 5.2f, 0), new Vector3(d.W * 2 + 1, 1.3f, 0.15f), MaterialFactory.Emissive(color, color * 0.6f));
-            Block(g, new Vector3(-(d.W + 0.5f), 2.9f, 0), new Vector3(0.2f, 5.8f, 0.2f), metal);
-            Block(g, new Vector3(d.W + 0.5f, 2.9f, 0), new Vector3(0.2f, 5.8f, 0.2f), metal);
+            Block(g, new Vector3(0, 5.2f, 0), new Vector3(d.HW[i] * 2 + 1, 1.3f, 0.15f), MaterialFactory.Emissive(color, color * 0.6f));
+            Block(g, new Vector3(-(d.HW[i] + 0.5f), 2.9f, 0), new Vector3(0.2f, 5.8f, 0.2f), metal);
+            Block(g, new Vector3(d.HW[i] + 0.5f, 2.9f, 0), new Vector3(0.2f, 5.8f, 0.2f), metal);
         }
     }
 }

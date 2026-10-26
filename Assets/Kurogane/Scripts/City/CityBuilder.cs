@@ -51,14 +51,14 @@ namespace Kurogane.City
         public CityBuilder(TrackBuilder builder, CityStyle cityStyle)
         {
             tb = builder;
-            d = builder.Data;
+            d = builder.Geometry;
             style = cityStyle != null ? cityStyle : ScriptableObject.CreateInstance<CityStyle>();
             rng = new System.Random(style.seed);
             var p = d.P[d.TownStart];
             origin = p.pos;
             fwd = p.forward;
             right = p.right;
-            W = d.W;
+            W = d.HW[d.TownStart];
             length = (d.N - 1 - d.TownStart) * d.Step;
             z1 = length * 0.25f;   // primera calle transversal (semáforo)
             zr = length * 0.43f;   // paso a nivel

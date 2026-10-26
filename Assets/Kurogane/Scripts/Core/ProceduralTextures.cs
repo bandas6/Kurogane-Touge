@@ -145,6 +145,42 @@ namespace Kurogane.Core
             return g.ToTexture("RetainingWall");
         }
 
+        /// <summary>Pared de roca viva cortada para abrir la carretera: vetas oscuras inclinadas y algo de musgo.</summary>
+        public static Texture2D RockWall()
+        {
+            var g = new Canvas(64, 64);
+            g.Fill(H("#6e6a62"));
+            g.Speck(900, new[] { H("#5d5952"), H("#7e7a71"), H("#4c4943"), H("#878278") }, 2, 2);
+            for (int i = 0; i < 14; i++)
+            {
+                int x = R(0, 64), y = R(0, 64), len = R(8, 22);
+                for (int k = 0; k < len; k++) g.Blend(x + k, y + k / 2, 2, 1, H("#1e1c1a"), 0.55f);
+            }
+            for (int i = 0; i < 70; i++) g.Rect(R(0, 64), R(0, 64), R(1, 3), 1, H("#34422a"));
+            return g.ToTexture("RockWall");
+        }
+
+        /// <summary>Muro de piedra seca en hiladas (石垣), como los de las carreteras viejas.</summary>
+        public static Texture2D StoneWall()
+        {
+            var g = new Canvas(64, 64);
+            g.Fill(H("#2b2a27"));
+            var stones = new[] { H("#7a766c"), H("#6a665d"), H("#858176"), H("#5f5c55") };
+            for (int row = 0; row < 8; row++)
+            {
+                int x = row % 2 == 0 ? 0 : -6;
+                while (x < 64)
+                {
+                    int w = R(9, 16);
+                    g.Rect(x + 1, row * 8 + 1, w - 2, 6, stones[R(0, stones.Length)]);
+                    g.Blend(x + 1, row * 8 + 6, w - 2, 1, H("#000000"), 0.3f);
+                    x += w;
+                }
+            }
+            g.Speck(220, new[] { H("#3d4a2e"), H("#2f3a24") });
+            return g.ToTexture("StoneWall");
+        }
+
         public static Texture2D GuardRail()
         {
             var g = new Canvas(8, 32);

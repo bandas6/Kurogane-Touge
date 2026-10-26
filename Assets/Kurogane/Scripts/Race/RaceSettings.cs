@@ -11,7 +11,7 @@ namespace Kurogane.Race
             Sound = "kurogane.volumenSonido", Music = "kurogane.volumenMusica", Touch = "kurogane.tactil",
             Vsync = "kurogane.vsync", Quality = "kurogane.calidad", ScreenKey = "kurogane.pantalla",
             ResW = "kurogane.resAncho", ResH = "kurogane.resAlto", Fps = "kurogane.verFps", Weather = "kurogane.clima",
-            Traffic = "kurogane.trafico";
+            Traffic = "kurogane.trafico", Track = "kurogane.pista", Direction = "kurogane.sentido";
 
         public static void Load(RaceManager r)
         {
@@ -31,8 +31,10 @@ namespace Kurogane.Race
                 ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow;
             r.resolution = new Vector2Int(PlayerPrefs.GetInt(ResW, r.resolution.x), PlayerPrefs.GetInt(ResH, r.resolution.y));
             r.showFps = PlayerPrefs.GetInt(Fps, r.showFps ? 1 : 0) == 1;
-            r.weather = Mathf.Clamp(PlayerPrefs.GetInt(Weather, r.weather), 0, 5);
+            r.weather = Mathf.Clamp(PlayerPrefs.GetInt(Weather, r.weather), 0, 6);
             r.traffic = Mathf.Clamp(PlayerPrefs.GetInt(Traffic, r.traffic), 0, 2);
+            r.trackId = PlayerPrefs.GetString(Track, r.trackId);
+            r.direction = (Kurogane.Track.TrackDirection)Mathf.Clamp(PlayerPrefs.GetInt(Direction, (int)r.direction), 0, 1);
         }
 
         public static void Save(RaceManager r)
@@ -54,6 +56,8 @@ namespace Kurogane.Race
             PlayerPrefs.SetInt(Fps, r.showFps ? 1 : 0);
             PlayerPrefs.SetInt(Weather, r.weather);
             PlayerPrefs.SetInt(Traffic, r.traffic);
+            PlayerPrefs.SetString(Track, r.trackId ?? "");
+            PlayerPrefs.SetInt(Direction, (int)r.direction);
             PlayerPrefs.Save();
         }
     }
