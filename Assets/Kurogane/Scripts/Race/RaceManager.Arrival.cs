@@ -4,8 +4,8 @@ namespace Kurogane.Race
 {
     /// <summary>
     /// Llegada al pueblo (bloque B): al cruzar la meta el coche sigue solo por el carril izquierdo hasta unos
-    /// 40 km/h y frena frente a la tienda de tofu, mientras la cámara corta entre tres planos fijos. Después
-    /// salen los resultados. Confirmar la salta.
+    /// 40 km/h y frena frente a la tienda de tofu (subiendo, poco antes del final de la carretera en la cima), mientras
+    /// la cámara corta entre tres planos fijos. Después salen los resultados. Confirmar la salta.
     /// </summary>
     public partial class RaceManager
     {
@@ -101,7 +101,8 @@ namespace Kurogane.Race
             var d = track.Data;
             int i = player.Index;
             int look = Mathf.Min(d.N - 1, i + 5 + Mathf.RoundToInt(player.Speed * 0.35f));
-            float lane = Mathf.Lerp(0, arrivalLane, Mathf.InverseLerp(d.FinishIndex, d.TownStart, look));
+            // Bajando se pasa al carril izquierdo a lo largo de la entrada al pueblo; subiendo, en unos 50 m tras la meta
+            float lane = Mathf.Lerp(0, arrivalLane, Mathf.InverseLerp(d.FinishIndex, d.Uphill ? d.FinishIndex + 25 : d.TownStart, look));
             var p = d.P[look];
             var to = p.pos + p.right * lane - player.transform.position;
             float want = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;

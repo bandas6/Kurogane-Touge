@@ -19,7 +19,7 @@ namespace Kurogane.Race
 
     public enum MenuRow
     {
-        Coche, Modo, Rival, Caja, Clima, Trafico, Opciones, Empezar,
+        Pista, Sentido, Coche, Modo, Rival, Caja, Clima, Trafico, Opciones, Empezar,
         Velocidad, Filtro, Sonido, Musica, Tactil, Resolucion, Pantalla, Vsync, Calidad, Fps, Volver
     }
 
@@ -43,8 +43,12 @@ namespace Kurogane.Race
         [Tooltip("Muestra los fps y el tiempo por cuadro en el HUD, para medir el rendimiento.")]
         public bool showFps;
 
-        static readonly MenuRow[] RacePage = { MenuRow.Coche, MenuRow.Modo, MenuRow.Rival, MenuRow.Caja, MenuRow.Clima, MenuRow.Trafico, MenuRow.Opciones, MenuRow.Empezar };
-        static readonly string[] WeatherNames = { "Despejado", "Amanecer", "Atardecer", "Niebla", "Lluvia", "Al azar" };
+        static readonly MenuRow[] RacePage =
+        {
+            MenuRow.Pista, MenuRow.Sentido, MenuRow.Coche, MenuRow.Modo, MenuRow.Rival, MenuRow.Caja, MenuRow.Clima, MenuRow.Trafico,
+            MenuRow.Opciones, MenuRow.Empezar
+        };
+        static readonly string[] WeatherNames = { "Despejado", "Amanecer", "Atardecer", "Niebla", "Lluvia", "Al azar", "Según la pista" };
         static readonly MenuRow[] OptionsPageDesktop =
         {
             MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil,
@@ -54,7 +58,8 @@ namespace Kurogane.Race
         {
             MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil, MenuRow.Calidad, MenuRow.Fps, MenuRow.Volver
         };
-        public static readonly string[] PauseLabels = { "Continuar", "Reiniciar bajada", "Menú principal" };
+        public const int PauseCount = 3;
+        public string PauseLabel(int i) => i == 0 ? "Continuar" : i == 1 ? "Reiniciar " + RunName : "Menú principal";
         static readonly string[] SkillNames = { "Fácil", "Normal", "Leyenda" };
 
         public RaceGrade Result { get; private set; }
@@ -71,6 +76,8 @@ namespace Kurogane.Race
 
         public void OpenMenu()
         {
+            // Pista cargada desde Inicio: el menú y el garaje están allí
+            if (!frontEnd && GameSession.FromStartScene) { LoadStartScene(); return; }
             Time.timeScale = 1;
             ResetArrival();
             if (trafficManager != null) trafficManager.ResetMountain();
@@ -82,11 +89,15 @@ namespace Kurogane.Race
             PreviewCar();
         }
 
-        /// <summary>Pone el coche elegido en la salida, parado, con la cámara de garaje girando alrededor.</summary>
+        /// <summary>
+        /// Pone el coche elegido parado en la salida (o en el garaje de la escena Inicio), con la cámara de garaje
+        /// girando alrededor.
+        /// </summary>
         void PreviewCar()
         {
             var ps = PlayerSpec;
-            player.Init(track.Data, ps, 5, 0);
+            if (frontEnd) player.Park(ps, garage != null ? garage.Spot : Vector3.zero, garage != null ? garage.SpotHeading : 0);
+            else player.Init(track.Data, ps, track.Data.RaceStart, 0);
             player.ControlsEnabled = false;
             player.AutoBrake = false;
             player.GetComponent<CarVisual>().Build(ps);
@@ -126,7 +137,10 @@ namespace Kurogane.Race
             else if (InOptions && DriverInput.Pause) Activate(MenuRow.Volver);
         }
 
-        public bool RowEnabled(MenuRow row) => row != MenuRow.Rival || mode == RaceMode.Batalla;
+        public bool RowEnabled(MenuRow row) =>
+            row == MenuRow.Rival ? mode == RaceMode.Batalla
+            : row == MenuRow.Sentido ? SelectedTrack != null && SelectedTrack.allowUphill
+            : row != MenuRow.Pista || Tracks.Count > 1;
         public static bool IsAction(MenuRow row) => row == MenuRow.Opciones || row == MenuRow.Empezar || row == MenuRow.Volver;
 
         void MoveRow(int dir)
@@ -182,6 +196,8 @@ namespace Kurogane.Race
         {
             switch (row)
             {
+                case MenuRow.Pista: ChangeTrack(dir); break;
+                case MenuRow.Sentido: ChangeDirection(); break;
                 case MenuRow.Coche:
                     selectedCar = (selectedCar + dir + cars.Length) % cars.Length;
                     PreviewCar();
@@ -222,7 +238,8 @@ namespace Kurogane.Race
         void BeginRace()
         {
             RaceSettings.Save(this);
-            StartRace();
+            if (SelectedIsHere) StartRace();
+            else LoadSelectedTrack();
         }
 
         public void NextCarAndRestart()
@@ -232,12 +249,12 @@ namespace Kurogane.Race
             StartRace();
         }
 
-        public static string RowLabel(MenuRow row)
+        public string RowLabel(MenuRow row)
         {
             switch (row)
             {
                 case MenuRow.Opciones: return "OPCIONES";
-                case MenuRow.Empezar: return "EMPEZAR BAJADA";
+                case MenuRow.Empezar: return "EMPEZAR " + RunName.ToUpper();
                 case MenuRow.Volver: return "VOLVER";
                 case MenuRow.Filtro: return "Filtro PS2";
                 case MenuRow.Musica: return "Música";
@@ -254,6 +271,10 @@ namespace Kurogane.Race
         {
             switch (row)
             {
+                case MenuRow.Pista: return SelectedTrack != null ? SelectedTrack.DisplayName : "—";
+                case MenuRow.Sentido:
+                    return SelectedTrack == null || !SelectedTrack.allowUphill ? "Solo bajada"
+                        : EffectiveDirection == Kurogane.Track.TrackDirection.Subida ? "Subida" : "Bajada";
                 case MenuRow.Coche: return PlayerSpec.displayName;
                 case MenuRow.Modo: return mode == RaceMode.Batalla ? "Batalla" : "Contrarreloj";
                 case MenuRow.Rival: return mode == RaceMode.Batalla ? SkillNames[(int)rivalSkill] : "—";
@@ -345,8 +366,8 @@ namespace Kurogane.Race
         void PauseInput()
         {
             if (DriverInput.Pause) { Resume(); return; }
-            if (DriverInput.MenuUp) pauseRow = (pauseRow + PauseLabels.Length - 1) % PauseLabels.Length;
-            if (DriverInput.MenuDown) pauseRow = (pauseRow + 1) % PauseLabels.Length;
+            if (DriverInput.MenuUp) pauseRow = (pauseRow + PauseCount - 1) % PauseCount;
+            if (DriverInput.MenuDown) pauseRow = (pauseRow + 1) % PauseCount;
             if (DriverInput.Confirm) PauseAction(pauseRow);
         }
 
@@ -370,7 +391,7 @@ namespace Kurogane.Race
         {
             var g = new RaceGrade
             {
-                time = Mathf.Clamp(Mathf.RoundToInt(30 + (parTime - RaceTime)), 0, 40),
+                time = Mathf.Clamp(Mathf.RoundToInt(30 + (ParTime - RaceTime)), 0, 40),
                 water = Mathf.RoundToInt(Water * 0.25f),
                 style = Mathf.RoundToInt(Mathf.Clamp01(Score / (float)driftPar) * 15) + Mathf.Min(5, gutterRuns),
                 clean = Mathf.Max(0, 15 - hits * 3),

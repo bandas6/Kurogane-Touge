@@ -23,6 +23,15 @@ namespace Kurogane.Hud
         readonly Image[] statBars = new Image[20];
         readonly Image[] pauseRows = new Image[3];
 
+        // Ficha de la pista elegida: mapa, perfil de altitud, descripción y récord
+        RectTransform card;
+        RawImage map, profile;
+        Text cardTitle, cardSummary, cardText;
+        Kurogane.Track.TrackData cardFor;
+
+        readonly Text[] pauseTexts = new Text[RaceManager.PauseCount];
+        Text againLabel;
+
         Text verdict, letter, total, resultHint;
         Image letterBg;
         readonly Text[] lineLeft = new Text[5], lineRight = new Text[5];
@@ -47,6 +56,7 @@ namespace Kurogane.Hud
             dragImg.gameObject.AddComponent<DragArea>().dragged = dx => race.chaseCamera.Orbit(dx);
 
             BuildMenu(canvas.transform);
+            BuildCard(canvas.transform);
             BuildPause(canvas.transform);
             BuildResults(canvas.transform);
         }
@@ -120,9 +130,10 @@ namespace Kurogane.Hud
             float h = 136 + list.Count * RowH + (race.InOptions ? 50 : 110);
             menu.Place(new Vector2(0, 1), new Vector2(40, -36), new Vector2(PanelW, h));
 
-            subtitle.Set(race.InOptions ? "Opciones" : "Monte Kurogane · 2,3 km · 4 horquillas · 1 túnel");
+            var def = race.SelectedTrack;
+            subtitle.Set(race.InOptions ? "Opciones" : def != null ? $"{def.DisplayName} · {race.RowValue(MenuRow.Sentido)}" : "");
             tagline.Set(race.InOptions ? "Se guardan al volver." : race.PlayerSpec.tagline);
-            record.Set(race.InOptions ? "" : $"Récord ({race.RowValue(MenuRow.Modo)}) {RaceManager.Fmt(race.BestTime)}");
+            record.Set(race.InOptions ? "" : $"Récord de {race.RunName} ({race.RowValue(MenuRow.Modo)}, {race.PlayerSpec.displayName}) {RaceManager.Fmt(race.BestTime)}");
 
             for (int i = 0; i < MaxRows; i++)
             {
@@ -138,10 +149,10 @@ namespace Kurogane.Hud
                 r.right.Show(!action);
                 r.value.Show(!action);
                 r.center.Show(action);
-                if (action) r.center.Set(RaceManager.RowLabel(row));
+                if (action) r.center.Set(race.RowLabel(row));
                 else
                 {
-                    r.label.Set(RaceManager.RowLabel(row));
+                    r.label.Set(race.RowLabel(row));
                     r.value.Set(race.RowValue(row));
                 }
             }
@@ -161,6 +172,52 @@ namespace Kurogane.Hud
                 : "↑ ↓ elegir   ·   ← → cambiar   ·   Tab otro coche   ·   Enter empezar   ·   arrastra para girar");
         }
 
+        // ---------- Ficha de la pista ----------
+
+        const float CardW = 380, MapSize = 250;
+
+        void BuildCard(Transform parent)
+        {
+            card = UiKit.Panel("Ficha de pista", parent, UiKit.PanelColor, true).rectTransform;
+            card.Place(new Vector2(1, 1), new Vector2(-40, -36), new Vector2(CardW, 490));
+            var tl = new Vector2(0, 1);
+            cardTitle = UiKit.Label("Nombre", card, 24, TextAnchor.UpperLeft, FontStyle.Bold);
+            cardTitle.rectTransform.Place(tl, new Vector2(16, -10), new Vector2(CardW - 32, 32));
+            map = new GameObject("Mapa", typeof(RectTransform)).AddComponent<RawImage>();
+            map.transform.SetParent(card, false);
+            map.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -46), new Vector2(MapSize, MapSize));
+            map.raycastTarget = false;
+            profile = new GameObject("Perfil", typeof(RectTransform)).AddComponent<RawImage>();
+            profile.transform.SetParent(card, false);
+            profile.rectTransform.Place(tl, new Vector2(16, -46 - MapSize - 8), new Vector2(CardW - 32, 56));
+            profile.raycastTarget = false;
+            cardSummary = UiKit.Label("Ficha", card, 16, TextAnchor.UpperLeft);
+            cardSummary.rectTransform.Place(tl, new Vector2(16, -46 - MapSize - 72), new Vector2(CardW - 32, 42));
+            cardSummary.horizontalOverflow = HorizontalWrapMode.Wrap;
+            cardText = UiKit.Label("Descripción", card, 16, TextAnchor.UpperLeft);
+            cardText.rectTransform.Place(tl, new Vector2(16, -46 - MapSize - 118), new Vector2(CardW - 32, 66));
+            cardText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        }
+
+        void UpdateCard()
+        {
+            var data = race.SelectedData;
+            var def = race.SelectedTrack;
+            card.Show(data != null);
+            if (data == null) return;
+            if (data != cardFor)
+            {
+                cardFor = data;
+                if (map.texture != null) Destroy(map.texture);
+                if (profile.texture != null) Destroy(profile.texture);
+                map.texture = Kurogane.Track.TrackPreview.Map(data, 256);
+                profile.texture = Kurogane.Track.TrackPreview.Profile(data, 348, 56);
+                cardTitle.Set(string.IsNullOrEmpty(def.japaneseName) ? def.DisplayName : $"{def.japaneseName}  {def.DisplayName}");
+                cardSummary.Set(Kurogane.Track.TrackPreview.Summary(data));
+                cardText.Set(def.description);
+            }
+        }
+
         // ---------- Pausa ----------
 
         void BuildPause(Transform parent)
@@ -176,7 +233,8 @@ namespace Kurogane.Hud
                 pauseRows[i] = UiKit.Panel("Opción", pause, Color.clear, true);
                 pauseRows[i].rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -60 - i * 50), new Vector2(380, 44));
                 UiKit.Label("Texto", pauseRows[i].transform, 26, TextAnchor.MiddleCenter, FontStyle.Bold).rectTransform.Stretch();
-                pauseRows[i].GetComponentInChildren<Text>().text = RaceManager.PauseLabels[i];
+                pauseTexts[i] = pauseRows[i].GetComponentInChildren<Text>();
+                pauseTexts[i].text = race.PauseLabel(i);
                 pauseRows[i].OnTap(() => race.PauseAction(index));
             }
         }
@@ -216,6 +274,7 @@ namespace Kurogane.Hud
                 var t = UiKit.Label("Texto", b.transform, 19, TextAnchor.MiddleCenter, FontStyle.Bold);
                 t.rectTransform.Stretch();
                 t.text = labels[i];
+                if (i == 0) againLabel = t;
                 b.OnTap(actions[i]);
             }
             resultHint = UiKit.Label("Siguiente", results, 15, TextAnchor.LowerCenter);
@@ -237,6 +296,7 @@ namespace Kurogane.Hud
             Line(3, $"Limpieza  {race.Hits} golpes", $"{g.clean} / 15");
             Line(4, battle ? (race.Won ? "Batalla ganada" : "Batalla perdida") : "", battle ? (g.battle > 0 ? "+" : "") + g.battle : "");
             resultHint.Set("Siguiente coche: " + race.NextCarSpec.displayName);
+            againLabel.Set($"Otra {race.RunName}  (Enter)");
         }
 
         void Line(int i, string left, string right)
@@ -253,11 +313,17 @@ namespace Kurogane.Hud
             drag.Show(inMenu);
             menu.Show(inMenu);
             if (inMenu) UpdateMenu();
+            card.Show(inMenu && !race.InOptions);
+            if (inMenu && !race.InOptions) UpdateCard();
 
             bool paused = race.State == RaceState.Paused;
             pause.Show(paused);
             if (paused)
-                for (int i = 0; i < 3; i++) pauseRows[i].color = i == race.PauseIndex ? UiKit.Highlight : UiKit.Faint;
+                for (int i = 0; i < RaceManager.PauseCount; i++)
+                {
+                    pauseRows[i].color = i == race.PauseIndex ? UiKit.Highlight : UiKit.Faint;
+                    pauseTexts[i].Set(race.PauseLabel(i));
+                }
 
             bool showResults = race.ShowResults;
             results.Show(showResults);

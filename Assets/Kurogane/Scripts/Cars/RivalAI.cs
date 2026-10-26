@@ -70,12 +70,13 @@ namespace Kurogane.Cars
                     if (gap > 90) sk -= 0.07f;
                     else if (gap < -10) sk += 0.05f;
                 }
-                // Tras la meta sigue despacio hacia el pueblo y se para a 100 m, apartado a la derecha
+                // Tras la meta sigue despacio (hacia el pueblo, o hacia la cima subiendo) y se para a 100 m, apartado a la derecha
                 float target = Finished
                     ? (Distance < Track.TimedLength + 100 ? Mathf.Min(9, Track.VMax[Mathf.Min(Track.N - 1, i + 3)]) : 0)
                     : Mathf.Min(spec.gearTopSpeed[spec.Gears - 1] * 0.97f,
                         Track.VMax[Mathf.Min(Track.N - 1, i + 3)] * sk * (spec.grip > 9 ? 1.03f : 1) * Mathf.Sqrt(GripScale));
-                float accUp = (Speed < 12 ? 6 : 4.2f) * spec.gearAccel[0] / 10f;
+                // Subiendo, la pendiente le resta aceleración (Track.RivalAccel); bajando es 1
+                float accUp = (Speed < 12 ? 6 : 4.2f) * spec.gearAccel[0] / 10f * Track.RivalAccel;
                 Braking = target < Speed - 0.5f;
                 Speed += Mathf.Clamp(target - Speed, -10 * dt, accUp * dt);
                 Distance += Speed * dt;

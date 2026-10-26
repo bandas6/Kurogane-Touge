@@ -71,6 +71,12 @@ namespace Kurogane.Atmosphere
                 ground = horizon * 0.4f;
             }
             float valley = ValleyAzimuth();
+            // Cordilleras y ciudad lejana del ambiente de la pista (sin tema: las del Monte Kurogane)
+            var builderForTheme = FindAnyObjectByType<TrackBuilder>();
+            var theme = builderForTheme != null ? builderForTheme.Theme : null;
+            float farRidge = theme != null ? theme.farRidge : 9, nearRidge = theme != null ? theme.nearRidge : 6;
+            float rough = theme != null ? theme.ridgeRoughness : 0.6f;
+            if (theme != null) valleyLights = theme.valleyLights;
             // Textura blanca propia (no Texture2D.whiteTexture, que es interna de Unity y no se puede hornear)
             var white = new Texture2D(1, 1, TextureFormat.RGBA32, false) { name = "Blanco" };
             white.SetPixel(0, 0, Color.white);
@@ -82,9 +88,10 @@ namespace Kurogane.Atmosphere
             var dome = Material(white, false, Queue);
             dome.SetFloat("_Gradient", 1);
             Add(DomeName, Dome(), dome);
-            Add("Cordillera lejana", Ridge(0.97f, 9, 0.35f, valley, Color.Lerp(horizon, new Color(0.04f, 0.045f, 0.08f), 0.55f)), Material(white, false, Queue + 1));
-            Add("Ciudad lejana", Skyline(valley), Material(white, false, Queue + 2));
-            Add("Cordillera cercana", Ridge(0.93f, 6, 0.6f, valley, new Color(0.018f, 0.022f, 0.04f)), Material(white, false, Queue + 3));
+            Add("Cordillera lejana", Ridge(0.97f, farRidge, rough * 0.35f / 0.6f, valley, Color.Lerp(horizon, new Color(0.04f, 0.045f, 0.08f), 0.55f)), Material(white, false, Queue + 1));
+            if (theme == null || theme.distantCity) Add("Ciudad lejana", Skyline(valley), Material(white, false, Queue + 2));
+            else skyline.Clear();
+            Add("Cordillera cercana", Ridge(0.93f, nearRidge, rough, valley, new Color(0.018f, 0.022f, 0.04f)), Material(white, false, Queue + 3));
             Add(StarsName, Points(valley, out var valleyMesh), Material(white, true, Queue + 4));
             Add(ValleyName, valleyMesh, Material(white, true, Queue + 4));
             Add(MistName, Mist(valley), Material(soft, true, Queue + 5));
@@ -354,7 +361,7 @@ namespace Kurogane.Atmosphere
         {
             // El valle está hacia donde baja la carretera: de la salida a la meta
             var builder = FindAnyObjectByType<TrackBuilder>();
-            TrackData d = builder != null ? builder.Data : null;
+            TrackData d = builder != null ? builder.Geometry : null;
             if (d == null && builder != null && builder.definition != null) d = new TrackData(builder.definition);
             if (d == null) return 0;
             var dir = d.P[d.N - 1].pos - d.P[0].pos;

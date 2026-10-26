@@ -231,7 +231,7 @@ namespace Kurogane.EditorTools
         static TrackBuilder FindBuilder()
         {
             var builder = Object.FindAnyObjectByType<TrackBuilder>();
-            if (builder == null) { Dialog("No hay ninguna pista (TrackBuilder) en la escena abierta. Abre Kurogane > Abrir escena de prueba."); return null; }
+            if (builder == null) { Dialog("No hay ninguna pista (TrackBuilder) en la escena abierta. Abre la escena de una pista (Kurogane > Pistas)."); return null; }
             if (string.IsNullOrEmpty(builder.gameObject.scene.path)) { Dialog("Guarda la escena antes de hornear."); return null; }
             return builder;
         }
