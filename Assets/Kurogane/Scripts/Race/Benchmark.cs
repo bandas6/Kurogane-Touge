@@ -104,6 +104,12 @@ namespace Kurogane.Race
                     () => { race.worldPhysics = world; race.ApplySurface(); race.freeRoam = false; },
                     () => race.player.PlaceAt(from + along * 15 - lane, Mathf.Atan2(along.x, along.z)),
                     () => Straight(from - lane, along, 11));
+                // Lo mismo dentro del modo libre (bloque H3): minimapa, misiones y ciclo de clima
+                yield return Scenario("modo libre", 0, 2, 0,
+                    () => { race.mode = RaceMode.Libre; race.weather = 7; race.StartRace(); },
+                    () => { race.mode = RaceMode.Contrarreloj; race.weather = 0; },
+                    () => race.player.PlaceAt(from + along * 15 - lane, Mathf.Atan2(along.x, along.z)),
+                    () => Straight(from - lane, along, 11));
                 // Lo mismo sin la oclusión horneada, para ver lo que aporta
                 var cam = race.chaseCamera.GetComponent<Camera>();
                 yield return Scenario("pueblo abierto sin oclusión", 0, 2, 0,
@@ -135,10 +141,16 @@ namespace Kurogane.Race
             var main = new List<float>();
             var gpu = new List<float>();
             float t0 = Time.unscaledTime;
+            // Basura por cuadro (solo en builds de desarrollo) y recolecciones del GC durante la medición
+            var gcRec = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Memory, "GC Allocated In Frame");
+            long gcBytes = 0;
+            int gcFrames = 0, gc0 = -1;
             while (Time.unscaledTime - t0 < Seconds + Warmup)
             {
                 yield return null;
                 if (Time.unscaledTime - t0 < Warmup) continue;
+                if (gc0 < 0) gc0 = System.GC.CollectionCount(0);
+                if (gcRec.Valid) { gcBytes += gcRec.LastValue; gcFrames++; }
                 dt.Add(Time.unscaledDeltaTime * 1000);
                 FrameTimingManager.CaptureFrameTimings();
                 if (FrameTimingManager.GetLatestTimings(1, timing) > 0)
@@ -154,8 +166,11 @@ namespace Kurogane.Race
             dt.Sort();
             float avg = Average(dt), p95 = dt[Mathf.Min(dt.Count - 1, (int)(dt.Count * 0.95f))], worst = dt[dt.Count - 1];
             long mem = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() / (1024 * 1024);
+            int collections = System.GC.CollectionCount(0) - gc0;
+            string garbage = gcFrames > 0 ? $" · basura {gcBytes / 1024f / gcFrames:0.0} KB/cuadro, {collections} GC" : $" · {collections} GC";
+            gcRec.Dispose();
             Debug.Log(Tag + $"{name}: {1000 / avg:0.0} fps · cuadro {avg:0.0} ms (p95 {p95:0.0}, peor {worst:0.0}) · " +
-                      $"CPU {Average(cpu):0.00} ms (hilo principal {Average(main):0.00} ms) · GPU {Average(gpu):0.00} ms · {dt.Count} cuadros · memoria {mem} MB");
+                      $"CPU {Average(cpu):0.00} ms (hilo principal {Average(main):0.00} ms) · GPU {Average(gpu):0.00} ms · {dt.Count} cuadros · memoria {mem} MB" + garbage);
         }
 
         static float Average(List<float> v)

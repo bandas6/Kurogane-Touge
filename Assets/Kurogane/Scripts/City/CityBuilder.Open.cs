@@ -106,6 +106,7 @@ namespace Kurogane.City
             if (river) River();
             if (style.station) Station();
             if (river) Viewpoint();
+            DriftLot();
             StreetLamps();
             Frontages();
             Fields();
@@ -322,6 +323,53 @@ namespace Kurogane.City
             Text("見晴台", W3(x - 4, z - 3.28f, 1.2f), -fwd, 0.35f, new Color(1f, 0.95f, 0.82f));
             Mark(x, z - 2, 12, 9);
             Place(TownMap.PlaceKind.Mirador, "Mirador del río", W3(x, z - 6, 0), fwd);
+        }
+
+        /// <summary>
+        /// Explanada asfaltada con un círculo pintado y conos: zona de puntos de drift del modo libre. Va en el primer
+        /// sitio libre de unos cuantos, cerca de la calle mayor.
+        /// </summary>
+        void DriftLot()
+        {
+            const float sx = 40, sz = 36;
+            var candidates = new List<Vector2>();
+            if (river) { candidates.Add(new Vector2(40, riverZ + RiverHalf + 28)); candidates.Add(new Vector2(-40, riverZ + RiverHalf + 28)); }
+            candidates.Add(new Vector2(40, length + 45));
+            candidates.Add(new Vector2(-40, length + 45));
+            candidates.Add(new Vector2(118, (z1 + z2) / 2));
+            foreach (var c in candidates)
+            {
+                if (!Free(c.x, c.y, sx + 4, sz + 4)) continue;
+                Mark(c.x, c.y, sx + 4, sz + 4);
+                Box(Layer.Ground, W3(c.x, c.y, -0.17f), Street, new Vector3(sx, 0.38f, sz), TownCell.Concrete, TownCell.Concrete, TownCell.Concrete, TownCell.Asphalt);
+                // Círculo pintado de 12 m de radio y conos alrededor
+                const int n = 40;
+                for (int k = 0; k < n; k++)
+                {
+                    float a0 = k * Mathf.PI * 2 / n, a1 = (k + 0.5f) * Mathf.PI * 2 / n;
+                    var p0 = new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * 12;
+                    var p1 = new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)) * 12;
+                    var dir = (p1 - p0).normalized * 0.09f;
+                    var nrm = new Vector2(-dir.y, dir.x);
+                    var q0 = W3(c.x + p0.x - nrm.x, c.y + p0.y - nrm.y, 0.04f);
+                    var q1 = W3(c.x + p1.x - nrm.x, c.y + p1.y - nrm.y, 0.04f);
+                    var q2 = W3(c.x + p1.x + nrm.x, c.y + p1.y + nrm.y, 0.04f);
+                    var q3 = W3(c.x + p0.x + nrm.x, c.y + p0.y + nrm.y, 0.04f);
+                    // Las dos caras: según el sentido del tramo, una de ellas mira arriba
+                    Quad(Layer.Ground, q0, q1, q2, q3, TownCell.Paint);
+                    Quad(Layer.Ground, q1, q0, q3, q2, TownCell.Paint);
+                    if (k % 5 == 0)
+                    {
+                        var cone = new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * 17;
+                        Box(Layer.Detail, W3(c.x + cone.x, c.y + cone.y, 0.3f), Street, new Vector3(0.35f, 0.6f, 0.35f), TownCell.SignRed);
+                    }
+                }
+                Cylinder(Layer.Detail, W3(c.x + sx / 2 - 1, c.y + sz / 2 - 1, 0), 0.1f, 6.5f, TownCell.MetalDark);
+                Box(Layer.Detail, W3(c.x + sx / 2 - 1, c.y + sz / 2 - 1, 6.55f), Street, new Vector3(0.55f, 0.16f, 0.32f), TownCell.MetalDark, TownCell.MetalDark, TownCell.MetalDark, TownCell.MetalDark, TownCell.StreetLamp);
+                AddLight(W3(c.x + sx / 2 - 3, c.y + sz / 2 - 3, 6), new Color(1f, 0.9f, 0.72f), 22, 1.6f);
+                Place(TownMap.PlaceKind.Explanada, "Explanada", W3(c.x, c.y, 0), fwd);
+                return;
+            }
         }
 
         // ---------- Lugares ----------

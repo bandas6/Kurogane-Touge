@@ -10,7 +10,7 @@ namespace Kurogane.Track
 
     public enum TrackDirection { Bajada, Subida }
 
-    public enum LandmarkKind { Viaducto }
+    public enum LandmarkKind { Viaducto, Hotel }
 
     /// <summary>Decorado propio de una pista junto a la carretera (no se puede pisar).</summary>
     [Serializable]
@@ -25,6 +25,8 @@ namespace Kurogane.Track
         public float lateral;
         [Tooltip("Largo del monumento, en metros.")]
         public float length;
+        [Tooltip("Nombre (rótulo del hotel). Inventado.")]
+        public string name;
     }
 
     [Serializable]
@@ -114,6 +116,11 @@ namespace Kurogane.Track
         public string DisplayName => string.IsNullOrEmpty(displayName) ? name : displayName;
         /// <summary>Escena de la pista, con su geometría y luces horneadas.</summary>
         public string SceneName => "Pista_" + Id;
+        /// <summary>
+        /// El pueblo del pie es un pueblo abierto (modo libre). Sin estilo propio en el ambiente se usa el de serie,
+        /// que lo es.
+        /// </summary>
+        public bool HasOpenTown => (theme != null && theme.cityStyle != null ? theme.cityStyle.extent : 300) > 0;
 
         public static IEnumerable<TrackSegment> DefaultSegments()
         {

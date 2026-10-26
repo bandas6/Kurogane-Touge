@@ -296,7 +296,7 @@ namespace Kurogane.Hud
             Line(3, $"Limpieza  {race.Hits} golpes", $"{g.clean} / 15");
             Line(4, battle ? (race.Won ? "Batalla ganada" : "Batalla perdida") : "", battle ? (g.battle > 0 ? "+" : "") + g.battle : "");
             resultHint.Set("Siguiente coche: " + race.NextCarSpec.displayName);
-            againLabel.Set($"Otra {race.RunName}  (Enter)");
+            againLabel.Set(race.IsFree ? "Seguir en modo libre  (Enter)" : $"Otra {race.RunName}  (Enter)");
         }
 
         void Line(int i, string left, string right)
@@ -317,7 +317,7 @@ namespace Kurogane.Hud
             if (inMenu && !race.InOptions) UpdateCard();
 
             bool paused = race.State == RaceState.Paused;
-            pause.Show(paused);
+            pause.Show(paused && !race.MapOpen);
             if (paused)
                 for (int i = 0; i < RaceManager.PauseCount; i++)
                 {

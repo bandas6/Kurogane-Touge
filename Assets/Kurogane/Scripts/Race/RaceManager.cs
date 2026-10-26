@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Kurogane.Race
 {
-    public enum RaceMode { Batalla, Contrarreloj }
+    public enum RaceMode { Batalla, Contrarreloj, Libre }
     public enum RaceState { Countdown, Racing, Finished, Paused, Menu }
 
     /// <summary>
@@ -58,7 +58,7 @@ namespace Kurogane.Race
 
         [Header("Clima")]
         [Tooltip("0 Despejado, 1 Amanecer, 2 Atardecer, 3 Niebla, 4 Lluvia, 5 Al azar (cambia en cada bajada), 6 Según la pista.")]
-        [Range(0, 6)] public int weather;
+        [Range(0, 7)] public int weather;
         WeatherSystem weatherSystem;
         WeatherKind randomWeather;
 
@@ -116,6 +116,7 @@ namespace Kurogane.Race
             Ensure<HudView>();
             Ensure<MenuView>();
             Ensure<TouchControls>();
+            Ensure<FreeHud>();
             // Benchmark para el móvil (ver Benchmark.cs): desde Inicio lo corre la pista pedida (o la primera), de bajada
             bool bench = Benchmark.Requested(out string benchTrack) || GameSession.Benchmark;
             GameSession.Benchmark = false;
@@ -162,7 +163,8 @@ namespace Kurogane.Race
         void ApplyWeather(bool reroll)
         {
             if (weatherSystem == null) return;
-            if (weather == 6) weatherSystem.Apply(track.Theme != null ? track.Theme.defaultWeather : WeatherKind.Despejado);
+            if (weather == 7) weatherSystem.Apply(WeatherKind.Despejado); // ciclo del modo libre: lo lleva UpdateCycle
+            else if (weather == 6) weatherSystem.Apply(track.Theme != null ? track.Theme.defaultWeather : WeatherKind.Despejado);
             else if (weather >= 5)
             {
                 if (reroll) randomWeather = (WeatherKind)Random.Range(0, 5);
@@ -188,7 +190,8 @@ namespace Kurogane.Race
         /// <summary>Superficie del coche elegida en Opciones > Física (en la escena Inicio no hay pista).</summary>
         internal void ApplySurface()
         {
-            if (!frontEnd && player != null) player.UseWorldSurface(worldPhysics, track.BorderIndex);
+            // El modo libre va siempre con la del mundo, salvo en los desafíos (bajada de carrera)
+            if (!frontEnd && player != null) player.UseWorldSurface(worldPhysics || (IsFree && !InFreeBattle), track.BorderIndex);
         }
 
         /// <summary>Pone la pista en el sentido elegido (subida solo si la pista lo permite).</summary>
@@ -203,6 +206,12 @@ namespace Kurogane.Race
         public void StartRace()
         {
             if (frontEnd) { LoadSelectedTrack(); return; }
+            if (IsFree)
+            {
+                if (InFreeBattle && State == RaceState.Finished) ResumeFree();
+                else StartFree();
+                return;
+            }
             Time.timeScale = 1;
             var data = track.Data;
             var ps = PlayerSpec;
@@ -292,6 +301,7 @@ namespace Kurogane.Race
                     break;
 
                 case RaceState.Racing:
+                    if (IsFree && !InFreeBattle) { FreeUpdate(dt); break; }
                     RaceTime += dt;
                     if (DriverInput.Respawn) { player.Respawn(); chain = 0; multiplier = 1; Show("DE VUELTA EN LA PISTA"); }
                     Scoring(dt);

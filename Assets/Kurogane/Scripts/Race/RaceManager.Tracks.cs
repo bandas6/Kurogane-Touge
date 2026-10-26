@@ -37,6 +37,9 @@ namespace Kurogane.Race
             }
         }
 
+        /// <summary>La pista elegida tiene pueblo abierto: se puede jugar en modo libre.</summary>
+        public bool FreeAvailable => SelectedTrack != null && SelectedTrack.HasOpenTown;
+
         /// <summary>Sentido con el que se corre la pista elegida (bajada si no admite subida).</summary>
         public TrackDirection EffectiveDirection =>
             SelectedTrack != null && !SelectedTrack.allowUphill ? TrackDirection.Bajada : direction;
@@ -82,6 +85,7 @@ namespace Kurogane.Race
             if (list.Count == 0) return;
             int i = Mathf.Max(0, list.IndexOf(SelectedTrack));
             trackId = list[(i + dir + list.Count) % list.Count].Id;
+            if (mode == RaceMode.Libre && !FreeAvailable) mode = RaceMode.Batalla;
             // De vuelta a la pista de esta escena: el coche a la salida del sentido elegido
             if (SelectedIsHere && track.Direction != EffectiveDirection)
             {

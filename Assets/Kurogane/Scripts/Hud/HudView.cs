@@ -148,6 +148,15 @@ namespace Kurogane.Hud
                 new Vector2(360, player.manualGearbox ? 150 : 110));
             waterGroup.Place(touch ? new Vector2(0, 1) : Vector2.zero, touch ? new Vector2(24, -210) : new Vector2(24, 24), new Vector2(240, 60));
 
+            // Modo libre (fuera de los desafíos): sin cronómetro ni meta; el vaso, solo durante un reparto
+            bool roaming = race.IsFree && !race.InFreeBattle;
+            time.Show(!roaming);
+            record.Show(!roaming);
+            split.Show(!roaming);
+            position.Show(!roaming);
+            goal.Show(!roaming);
+            waterGroup.Show(!roaming || race.DeliveryActive);
+
             int k = Mathf.FloorToInt(race.RaceTime * 100);
             if (k != keyTime) { keyTime = k; time.Set(RaceManager.Fmt(race.RaceTime)); }
             if (race.BestTime != keyBest) { keyBest = race.BestTime; record.Set("Récord " + RaceManager.Fmt(race.BestTime)); }

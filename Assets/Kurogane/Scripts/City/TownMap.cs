@@ -24,7 +24,7 @@ namespace Kurogane.City
             public bool main;
         }
 
-        public enum PlaceKind { TiendaTofu, Gasolinera, Konbini, Mirador, Aparcamiento, Estacion, SalidaMontana }
+        public enum PlaceKind { TiendaTofu, Gasolinera, Konbini, Mirador, Aparcamiento, Estacion, SalidaMontana, Hotel, Explanada }
 
         [Serializable]
         public struct Place
