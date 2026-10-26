@@ -83,6 +83,8 @@ namespace Kurogane.Race
         string toast = "", bigMessage = "", splitText = "";
         readonly List<float> splits = new List<float>();
         BestRecord best;
+        /// <summary>El benchmark lo apaga: se teletransporta cerca de la meta y dejaría récords falsos.</summary>
+        internal bool saveRecords = true;
         RaceState stateBeforePause;
 
         [System.Serializable]
@@ -378,7 +380,7 @@ namespace Kurogane.Race
             BeginArrival();
             Result = Grade();
             Big("GOAL");
-            if (RaceTime < best.time)
+            if (saveRecords && RaceTime < best.time)
             {
                 best.time = RaceTime;
                 best.splits = new List<float>(splits);
