@@ -440,6 +440,11 @@ namespace Kurogane.Core
             Glow(38, 1.2f);
             Plain(39, "#ffd080", "#fff0c0");  // farola de calle
             Glow(39, 1.4f);
+            // Pueblo abierto (bloque H1)
+            Plain(40, "#25331f", "#2f4127");  // césped y descampados
+            Plain(41, "#3e3226", "#4c3e30");  // tierra de huerto
+            Plain(42, "#16242f", "#22384a");  // agua del río
+            Plain(43, "#5c5a52", "#6a675e");  // grava de solar y aparcamiento
 
             emission = e.ToTexture("PuebloEmision", false, false);
             return g.ToTexture("PuebloAtlas", false, false);

@@ -14,8 +14,9 @@ namespace Kurogane.City
     /// valle. Casi todo usa un único material con el atlas del pueblo y se combina por celdas de la pista, así entra
     /// en el troceado, en DetailCulling y en Kurogane > Hornear pista.
     /// Coordenadas locales de la calle: x lateral (negativo = izquierda), z a lo largo desde el inicio de la calle.
+    /// Con <see cref="CityStyle.extent"/> &gt; 0 el pueblo se abre en una red de calles transitables (CityBuilder.Open.cs).
     /// </summary>
-    public class CityBuilder
+    public partial class CityBuilder
     {
         enum Layer { Ground, Buildings, Detail, Water, MidCity }
 
@@ -64,12 +65,15 @@ namespace Kurogane.City
             zr = length * 0.43f;   // paso a nivel
             z2 = length * 0.62f;   // segunda calle transversal (konbini)
             zs = (d.StopIndex - d.TownStart) * d.Step; // tienda de tofu
+            crossings.Add((z1, 4.5f));
+            crossings.Add((z2, 4.5f));
         }
 
         public void Build()
         {
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             Materials();
+            if (Open) OpenLayout();
 
             Streets();
             RailCrossing();
@@ -77,10 +81,24 @@ namespace Kurogane.City
             Lots();
             ParkedCars();
             Poles();
-            Paddies();
-            Cedars();
+            if (Open) OpenTown();
+            else
+            {
+                Paddies();
+                Cedars();
+            }
             MidCity();
             Flush();
+        }
+
+        /// <summary>Calles que cruzan la calle mayor: posición a lo largo y medio ancho de la calzada.</summary>
+        readonly List<(float z, float hw)> crossings = new List<(float, float)>();
+
+        /// <summary>Medio ancho de la calle transversal en z (4,5 si no hay ninguna).</summary>
+        float CrossHalf(float z)
+        {
+            foreach (var c in crossings) if (Mathf.Abs(c.z - z) < 0.5f) return c.hw;
+            return 4.5f;
         }
 
         // ---------- Coordenadas ----------
@@ -246,16 +264,22 @@ namespace Kurogane.City
 
         // ---------- Calles ----------
 
-        bool Reserved(float z, float margin) =>
-            Mathf.Abs(z - z1) < 4.5f + margin || Mathf.Abs(z - z2) < 4.5f + margin || Mathf.Abs(z - zr) < 2.5f + margin;
+        bool Reserved(float z, float margin)
+        {
+            if (Mathf.Abs(z - zr) < 2.5f + margin) return true;
+            foreach (var c in crossings) if (Mathf.Abs(z - c.z) < c.hw + margin) return true;
+            return Open && river && Mathf.Abs(z - riverZ) < RiverHalf + 2 + margin;
+        }
 
         void Streets()
         {
-            // Aceras con bordillo a los dos lados de la calle mayor, en tramos que siguen la pendiente
+            // Aceras con bordillo a los dos lados de la calle mayor, en tramos que siguen la pendiente (en el pueblo
+            // abierto, hasta el final del pueblo; la calzada más allá de la pista la pone OpenTown)
+            float streetEnd = Open ? zEnd : length;
             for (int s = -1; s <= 1; s += 2)
-                for (float z = 0; z < length; z += 6)
+                for (float z = 0; z < streetEnd; z += 6)
                 {
-                    float za = z, zb = Mathf.Min(length, z + 6);
+                    float za = z, zb = Mathf.Min(streetEnd, z + 6);
                     if (Reserved((za + zb) / 2, 0)) continue;
                     float x0 = s * W, x1 = s * (W + 2.2f);
                     var bl = W3(s < 0 ? x1 : x0, za, 0.15f);
@@ -270,7 +294,9 @@ namespace Kurogane.City
                     else Quad(Layer.Ground, c0, c1, c1 + Vector3.up * 0.17f, c0 + Vector3.up * 0.17f, TownCell.Concrete);
                 }
 
-            // Calles transversales: losas de asfalto a ambos lados, con línea central
+            // Calles transversales: losas de asfalto a ambos lados, con línea central (en el pueblo abierto las pone
+            // OpenTown de punta a punta, con aceras)
+            if (Open) return;
             foreach (float zc in new[] { z1, z2 })
                 for (int s = -1; s <= 1; s += 2)
                 {
@@ -288,16 +314,18 @@ namespace Kurogane.City
 
         void RailCrossing()
         {
-            // Balasto y traviesas fuera de la calzada; carriles de lado a lado
+            // Balasto y traviesas fuera de la calzada; carriles de lado a lado (en el pueblo abierto, de punta a punta)
+            float railEnd = Open ? extent + 30 : 75;
             for (int s = -1; s <= 1; s += 2)
             {
-                float x0 = W, x1 = 75;
+                float x0 = W, x1 = railEnd;
                 Box(Layer.Ground, W3(s * (x0 + x1) / 2, zr, -0.12f), Street, new Vector3(x1 - x0, 0.3f, 3.2f), TownCell.Ballast);
                 for (float x = x0 + 0.4f; x < x1; x += 0.6f)
                     Box(Layer.Buildings, W3(s * x, zr, 0.06f), Street, new Vector3(0.22f, 0.1f, 2.2f), TownCell.RailTie);
+                Mark(s * (x0 + x1) / 2, zr, x1 - x0, 6);
             }
             foreach (float dz in new[] { -0.72f, 0.72f })
-                Box(Layer.Buildings, W3(0, zr + dz, 0.07f), Street, new Vector3(150, 0.12f, 0.07f), TownCell.RailSteel);
+                Box(Layer.Buildings, W3(0, zr + dz, 0.07f), Street, new Vector3(railEnd * 2, 0.12f, 0.07f), TownCell.RailSteel);
 
             // Barreras (levantadas), cruces de San Andrés y luces rojas: en cada sentido, antes de la vía y a la
             // izquierda del que llega (se circula por la izquierda)
@@ -369,16 +397,18 @@ namespace Kurogane.City
             }
             var small = new[] { TrafficModel.Kei, TrafficModel.Taxi, TrafficModel.Furgoneta };
 
-            // Junto a la acera de las calles transversales
+            // Junto a la acera de las calles transversales (sin pasar de la primera calle paralela del pueblo abierto)
+            float parkEnd = Open ? Mathf.Min(62, ParallelStreets.Count > 0 ? ParallelStreets[0] - 8 : 62) : 62;
             foreach (float zc in new[] { z1, z2 })
                 for (int s = -1; s <= 1; s += 2)
-                    for (float x = 14; x < 62; x += R(9, 16))
+                    for (float x = 14; x < parkEnd; x += R(9, 16))
                         if (Chance(0.55f))
-                            Park(small[rng.Next(small.Length)], W3(s * x, zc + 3.1f, 0.02f), Quaternion.LookRotation(s * right));
+                            Park(small[rng.Next(small.Length)], W3(s * x, zc + CrossHalf(zc) - 1.4f, 0.02f), Quaternion.LookRotation(s * right));
 
             // Dos en el aparcamiento del konbini, de morro hacia la tienda
+            float kz = z2 + CrossHalf(z2) + 1.5f;
             foreach (float dz in new[] { 3.3f, 8.5f })
-                Park(small[rng.Next(small.Length)], W3(W + 5.6f, z2 + 6 + dz, 0.02f), Quaternion.LookRotation(right));
+                Park(small[rng.Next(small.Length)], W3(W + 5.6f, kz + dz, 0.02f), Quaternion.LookRotation(right));
 
             // Uno repostando en la gasolinera
             Park(TrafficModel.Furgoneta, W3(W + 7.2f, 14, 0.02f), Quaternion.LookRotation(fwd));
@@ -401,11 +431,13 @@ namespace Kurogane.City
         {
             // Sitios fijos: gasolinera (derecha, al principio), konbini (derecha, tras la segunda transversal),
             // tienda de tofu (izquierda, donde para el coche), máquinas junto al paso a nivel y cabina
+            float kz = z2 + CrossHalf(z2) + 1.5f;
             GasStation(1, 8, 32);
-            Konbini(1, z2 + 6, z2 + 24);
+            Konbini(1, kz, kz + 18);
             TofuShop(-1, zs);
             Vending(-1, zr - 11);
-            PhoneBooth(1, z2 + 27);
+            PhoneBooth(1, kz + 21);
+            if (Open) MountainParking(-1, 4, 34);
 
             for (int s = -1; s <= 1; s += 2)
             {
@@ -424,7 +456,7 @@ namespace Kurogane.City
                 for (float z = -6; z < length + 6;)
                 {
                     float w = R(7.5f, 10.5f), zc = z + w / 2;
-                    if (Mathf.Abs(zc - z1) > 8 && Mathf.Abs(zc - z2) > 8 && Mathf.Abs(zc - zr) > 6 && Chance(style.backRowDensity))
+                    if (!Reserved(zc, 3.5f) && Mathf.Abs(zc - zr) > 6 && Chance(style.backRowDensity))
                         House(s, R(23, 27), zc, w, R(7, 8.5f), false, null);
                     z += w + R(1.5f, 4);
                 }
@@ -442,13 +474,24 @@ namespace Kurogane.City
         }
 
         /// <summary>Casa de dos pisos (o tienda con persiana) de cara a la calle mayor.</summary>
-        void House(int side, float setback, float zc, float w, float depth, bool shop, string sign)
+        void House(int side, float setback, float zc, float w, float depth, bool shop, string sign) =>
+            HouseAt(side * (setback + depth / 2), zc, Facing(side), w, depth, shop, sign, 2);
+
+        /// <summary>
+        /// Casa (o tienda) con el centro de la planta en (x, z) locales, mirando hacia rot*forward, de
+        /// <paramref name="floors"/> pisos. Marca su huella en la rejilla del pueblo abierto.
+        /// </summary>
+        void HouseAt(float x, float zc, Quaternion rot, float w, float depth, bool shop, string sign, int floors)
         {
-            int floors = 2;
             float h = floors * 2.9f;
-            var rot = Facing(side);
             var front = rot * Vector3.forward;
-            var baseC = W3(side * (setback + depth / 2), zc, -0.3f);
+            var baseC = W3(x, zc, -0.3f);
+            // Huella en ejes locales de la calle: el frente mira a ±x (calle mayor y paralelas) o a ±z (transversales)
+            bool facesX = Mathf.Abs(Vector3.Dot(front, right)) > 0.7f;
+            float spanX = facesX ? depth : w, spanZ = facesX ? w : depth;
+            // En el pueblo abierto no se pisa con calles, lugares ni otras casas (en la aldea la rejilla no se usa)
+            if (!Free(x, zc, spanX, spanZ)) return;
+            Mark(x, zc, spanX, spanZ);
             var m = Matrix4x4.TRS(baseC, rot, Vector3.one);
             Vector3 L(float x, float y, float z) => m.MultiplyPoint3x4(new Vector3(x, y, z));
 
@@ -466,13 +509,13 @@ namespace Kurogane.City
             for (int f = shop ? 1 : 0; f < floors; f++)
                 for (int k = 0; k < count; k++)
                 {
-                    float x = (k + 0.5f) / count * w - w / 2, y = f * 2.9f + 1.5f;
-                    if (f == 0 && k == 0) { FaceQuad(L(x, 1.05f, depth / 2 + 0.03f), rot, 0.95f, 2.0f, TownCell.Door); continue; }
-                    FaceQuad(L(x, y, depth / 2 + 0.03f), rot, 1.3f, 1.1f, Chance(style.litWindows) ? TownCell.WindowLit : TownCell.WindowDark);
+                    float wx = (k + 0.5f) / count * w - w / 2, y = f * 2.9f + 1.5f;
+                    if (f == 0 && k == 0) { FaceQuad(L(wx, 1.05f, depth / 2 + 0.03f), rot, 0.95f, 2.0f, TownCell.Door); continue; }
+                    FaceQuad(L(wx, y, depth / 2 + 0.03f), rot, 1.3f, 1.1f, Chance(style.litWindows) ? TownCell.WindowLit : TownCell.WindowDark);
                 }
             // Una ventana en cada costado
             foreach (int sx in new[] { -1, 1 })
-                FaceQuad(L(sx * (w / 2 + 0.03f), 4.4f, 0), rot * Quaternion.Euler(0, sx * 90, 0), 1.1f, 1.0f,
+                FaceQuad(L(sx * (w / 2 + 0.03f), h - 1.4f, 0), rot * Quaternion.Euler(0, sx * 90, 0), 1.1f, 1.0f,
                     Chance(style.litWindows * 0.7f) ? TownCell.WindowLit : TownCell.WindowDark);
 
             if (shop)
@@ -508,6 +551,7 @@ namespace Kurogane.City
         {
             special.Add((side, za, zb));
             float w = zb - za, depth = 13, h = 4.2f, setback = W + 2.6f + 6, zc = (za + zb) / 2;
+            Mark(side * (W + 11), zc, 23, w + 2);
             var rot = Facing(side);
             var front = rot * Vector3.forward;
             var baseC = W3(side * (setback + depth / 2), zc, -0.3f);
@@ -537,6 +581,7 @@ namespace Kurogane.City
         {
             special.Add((side, za, zb));
             float w = zb - za, zc = (za + zb) / 2, xc = side * (W + 3 + 6);
+            Mark(side * (W + 10), zc, 22, w + 6);
             var rot = Facing(side);
             var front = rot * Vector3.forward;
             var baseC = W3(xc, zc, -0.3f);
@@ -567,7 +612,8 @@ namespace Kurogane.City
         void TofuShop(int side, float zc)
         {
             float w = 10, depth = 9, h = 5.8f;
-            special.Add((side, zc - w / 2, zc + w / 2));
+            special.Add((side, zc - w / 2, zc + (Open ? w / 2 + 9 : w / 2)));
+            Mark(side * (W + 2.6f + depth / 2), zc + (Open ? 4.5f : 0), depth + 4, w + (Open ? 11 : 2));
             var rot = Facing(side);
             var front = rot * Vector3.forward;
             var baseC = W3(side * (W + 2.6f + depth / 2), zc, -0.3f);
@@ -591,11 +637,19 @@ namespace Kurogane.City
             // Farolillo rojo
             Box(Layer.Detail, L(w / 2 - 0.4f, 2.2f, depth / 2 + 0.5f), rot, new Vector3(0.42f, 0.62f, 0.42f), TownCell.Lantern);
             AddLight(L(0, 2.4f, depth / 2 + 2f), new Color(1f, 0.78f, 0.5f), 10, 1.5f);
+
+            // Pueblo abierto: el garaje de la tienda, al lado, donde se cambia de coche (modo libre)
+            if (!Open) return;
+            float gw = 7, gx = side < 0 ? -(w / 2 + 1 + gw / 2) : w / 2 + 1 + gw / 2;
+            Box(Layer.Buildings, L(gx, 1.9f, 0), rot, new Vector3(gw, 4.4f, depth), TownCell.WallWhite, TownCell.WallWhite, TownCell.WallWhite, TownCell.Roof);
+            FaceQuad(L(gx, 1.35f, depth / 2 + 0.03f), rot, gw - 1.2f, 2.7f, TownCell.Shutter);
+            Box(Layer.Detail, L(gx, 3.25f, depth / 2 + 0.25f), rot, new Vector3(0.5f, 0.15f, 0.3f), TownCell.MetalDark, TownCell.MetalDark, TownCell.MetalDark, TownCell.MetalDark, TownCell.StreetLamp);
         }
 
         void Vending(int side, float zc)
         {
             special.Add((side, zc - 2, zc + 2));
+            Mark(side * (W + 3), zc, 3, 4);
             var rot = Facing(side);
             for (int k = 0; k < 3; k++)
             {
@@ -607,6 +661,7 @@ namespace Kurogane.City
         void PhoneBooth(int side, float zc)
         {
             special.Add((side, zc - 1, zc + 1));
+            Mark(side * (W + 3), zc, 2, 2);
             var rot = Facing(side);
             Box(Layer.Detail, W3(side * (W + 2.9f), zc, 1.25f), rot, new Vector3(1, 2.3f, 1), TownCell.PhoneBooth, TownCell.PhoneBooth, TownCell.PhoneBooth, TownCell.Concrete);
         }
@@ -692,10 +747,11 @@ namespace Kurogane.City
         /// </summary>
         void MidCity()
         {
-            float endY = StreetY(length);
+            // Empieza a 300 m del final de la calle; con el pueblo abierto, a 150 m de su borde
+            float endY = StreetY(length), start = Open ? zEnd - length + 150 : 300;
             for (int i = 0; i < style.midBuildings; i++)
             {
-                float dz = 300 + Mathf.Pow((float)rng.NextDouble(), 0.8f) * 1200;
+                float dz = start + Mathf.Pow((float)rng.NextDouble(), 0.8f) * 1200;
                 float spread = 150 + dz * 0.45f;
                 float x = (float)(rng.NextDouble() * 2 - 1) * spread;
                 float centre = 1 - Mathf.Abs(x) / spread;

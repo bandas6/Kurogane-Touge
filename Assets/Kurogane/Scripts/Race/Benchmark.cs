@@ -82,13 +82,44 @@ namespace Kurogane.Race
                 () => { race.worldPhysics = true; race.ApplySurface(); },
                 () => { race.worldPhysics = world; race.ApplySurface(); });
             yield return Scenario("llegada al pueblo", 0, 2, d.FinishIndex - 60, null, null);
+            // Pueblo abierto (bloque H1): la avenida de punta a punta a 40 km/h, con la superficie del mundo
+            var map = race.track.Root != null ? race.track.Root.GetComponentInChildren<Kurogane.City.TownMap>(true) : null;
+            if (map != null && map.edges.Exists(e => e.lanes > 1))
+            {
+                Vector3 from = default, to = default;
+                float minX = float.MaxValue, maxX = float.MinValue;
+                var dir = race.track.Geometry.P[race.track.Geometry.TownStart].right;
+                foreach (var e in map.edges)
+                    if (e.lanes > 1)
+                        foreach (var n in new[] { map.nodes[e.a], map.nodes[e.b] })
+                        {
+                            float x = Vector3.Dot(n, dir);
+                            if (x < minX) { minX = x; from = n; }
+                            if (x > maxX) { maxX = x; to = n; }
+                        }
+                var along = (to - from).normalized;
+                var lane = Vector3.Cross(Vector3.up, along) * 3.5f; // se circula por la izquierda: carril izquierdo
+                yield return Scenario("pueblo abierto", 0, 2, 0,
+                    () => { race.worldPhysics = true; race.ApplySurface(); race.freeRoam = true; },
+                    () => { race.worldPhysics = world; race.ApplySurface(); race.freeRoam = false; },
+                    () => race.player.PlaceAt(from + along * 15 - lane, Mathf.Atan2(along.x, along.z)),
+                    () => Straight(from - lane, along, 11));
+                // Lo mismo sin la oclusión horneada, para ver lo que aporta
+                var cam = race.chaseCamera.GetComponent<Camera>();
+                yield return Scenario("pueblo abierto sin oclusión", 0, 2, 0,
+                    () => { race.worldPhysics = true; race.ApplySurface(); race.freeRoam = true; cam.useOcclusionCulling = false; },
+                    () => { race.worldPhysics = world; race.ApplySurface(); race.freeRoam = false; cam.useOcclusionCulling = true; },
+                    () => race.player.PlaceAt(from + along * 15 - lane, Mathf.Atan2(along.x, along.z)),
+                    () => Straight(from - lane, along, 11));
+            }
             Debug.Log(Tag + "FIN");
             race.player.Autopilot = null;
             race.OpenMenu();
             Destroy(this);
         }
 
-        IEnumerator Scenario(string name, int weather, int traffic, int startIndex, Action setup, Action teardown)
+        IEnumerator Scenario(string name, int weather, int traffic, int startIndex, Action setup, Action teardown,
+            Action place = null, Func<(float, float, float)> drive = null)
         {
             race.weather = weather;
             race.traffic = traffic;
@@ -96,8 +127,8 @@ namespace Kurogane.Race
             race.StartRace();
             setup?.Invoke();
             while (race.State == RaceState.Countdown) yield return null;
-            race.player.ResetTo(startIndex, -2.4f);
-            race.player.Autopilot = Drive;
+            if (place != null) place(); else race.player.ResetTo(startIndex, -2.4f);
+            race.player.Autopilot = drive ?? Drive;
 
             var dt = new List<float>();
             var cpu = new List<float>();
@@ -133,6 +164,17 @@ namespace Kurogane.Race
             float s = 0;
             foreach (var x in v) s += x;
             return s / v.Count;
+        }
+
+        /// <summary>Piloto de prueba en línea recta (pueblo): sigue la recta que pasa por <paramref name="origin"/>.</summary>
+        (float gas, float brake, float steer) Straight(Vector3 origin, Vector3 along, float speed)
+        {
+            var p = race.player;
+            var pos = p.transform.position;
+            var target = origin + along * (Vector3.Dot(pos - origin, along) + 12);
+            var to = target - pos;
+            float err = Mathf.DeltaAngle(p.Heading * Mathf.Rad2Deg, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg) / 25f;
+            return (p.Speed < speed ? 0.7f : 0, p.Speed > speed + 1 ? 0.5f : 0, Mathf.Clamp(err, -1, 1));
         }
 
         /// <summary>Piloto de prueba: carril izquierdo al 75 % de la velocidad límite de cada punto.</summary>

@@ -12,5 +12,6 @@ namespace Kurogane.City
         Noren, VendingRed, VendingBlue, VendingWhite, SignRed, SignBlue, CanopyLight, Paddy,
         Dyke, RailTie, RailSteel, Stripes, Housing, Door, Balcony, AcUnit,
         PhoneBooth, Cedar, Trunk, Ballast, Paint, SignWood, Lantern, StreetLamp,
+        Grass, Earth, River, Lot,
     }
 }

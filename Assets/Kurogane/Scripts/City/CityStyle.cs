@@ -26,5 +26,18 @@ namespace Kurogane.City
 
         [Header("Ciudad media del valle (300 m - 1,5 km)")]
         [Range(0, 400)] public int midBuildings = 170;
+
+        [Header("Pueblo abierto (bloque H1)")]
+        [Tooltip("Medio ancho del pueblo a cada lado de la calle mayor, en metros. 0 = solo la calle mayor (aldea).")]
+        [Range(0, 400)] public float extent = 300;
+        [Tooltip("Largo del pueblo desde la entrada, en metros: la calle mayor sigue más allá del final de la pista.")]
+        [Range(200, 800)] public float length = 560;
+        [Tooltip("Proporción de solares con casa a lo largo de las calles (el resto, huertos y descampados).")]
+        [Range(0, 1)] public float density = 0.6f;
+        public bool river = true;
+        public bool station = true;
+        [Tooltip("Una de las calles transversales es una avenida de cuatro carriles.")]
+        public bool avenue = true;
+        public string stationName = "黒鉄駅";
     }
 }
