@@ -78,8 +78,18 @@ namespace Kurogane.EditorTools
             EditorUserBuildSettings.buildAppBundle = false;
             Keystore.Clear(); // firma de depuración de Unity: sirve para instalar en tu móvil, no para Google Play
             string path = Path.Combine(OutputDir, "Android", "KuroganeTouge-desarrollo.apk");
-            Run(BuildTarget.Android, BuildTargetGroup.Android, path,
-                BuildOptions.Development | BuildOptions.ConnectWithProfiler | BuildOptions.AutoRunPlayer);
+            // Tiempos de CPU y GPU por cuadro para el benchmark (Benchmark.cs); solo en esta build
+            bool timing = PlayerSettings.enableFrameTimingStats;
+            PlayerSettings.enableFrameTimingStats = true;
+            try
+            {
+                Run(BuildTarget.Android, BuildTargetGroup.Android, path,
+                    BuildOptions.Development | BuildOptions.ConnectWithProfiler | BuildOptions.AutoRunPlayer);
+            }
+            finally
+            {
+                PlayerSettings.enableFrameTimingStats = timing;
+            }
         }
 
         // ---------- Configuración común ----------

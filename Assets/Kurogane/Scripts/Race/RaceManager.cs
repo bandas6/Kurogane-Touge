@@ -120,6 +120,9 @@ namespace Kurogane.Race
             var crossing = track.Root != null ? track.Root.GetComponentInChildren<Kurogane.City.CrossingController>(true) : null;
             if (crossing != null)
                 crossing.allowed = () => player.Index < track.Data.FinishIndex - 40 || player.Speed < 1 || State == RaceState.Menu;
+
+            // Benchmark para el móvil (ver Benchmark.cs)
+            if (Benchmark.Requested()) gameObject.AddComponent<Benchmark>();
             player.WallHit += OnWallHit;
             player.RivalContact += v => { Water = Mathf.Max(0, Water - v * 0.8f); chaseCamera.Shake(0.4f); };
         }

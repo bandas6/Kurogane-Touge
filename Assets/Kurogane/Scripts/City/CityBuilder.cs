@@ -22,6 +22,11 @@ namespace Kurogane.City
         // Nombres de los objetos generados: KuroganeBake y TrackBuilder los usan para lightmaps y descarte
         public const string GroundName = "PuebloSuelo", BuildingsName = "Pueblo", DetailName = "PuebloDetalle",
             WaterName = "Arrozales", MidCityName = "CiudadMedia", LightName = "LuzPueblo";
+        /// <summary>
+        /// Capa de la ciudad media: es la única que la cámara dibuja más allá de la niebla cuando alarga su plano
+        /// lejano cerca del pueblo (ChaseCamera usa layerCullDistances); el resto se descarta al final de la niebla.
+        /// </summary>
+        public const int MidCityLayer = 30;
         static readonly string[] LayerNames = { GroundName, BuildingsName, DetailName, WaterName, MidCityName };
 
         class MeshData
@@ -798,6 +803,7 @@ namespace Kurogane.City
                 var mat = layer == Layer.Water ? water : layer == Layer.MidCity ? mid : town;
                 var go = tb.Add(LayerNames[(int)layer], mesh, mat);
                 if (layer == Layer.Detail) tb.Culling.Add(go.GetComponent<MeshRenderer>(), tb.detailDistance);
+                if (layer == Layer.MidCity) go.layer = MidCityLayer;
             }
         }
 

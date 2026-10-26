@@ -22,6 +22,7 @@ namespace Kurogane.CameraRig
         [Range(0, 1)] public float farBlend;
         public float townFarClip = 1600;
         float baseFar, maxFar;
+        float[] layerCull;
 
         Camera cam;
         float camHeading;
@@ -67,6 +68,13 @@ namespace Kurogane.CameraRig
             // valle, más allá de la niebla, solo se dibuja cerca del pueblo
             float fogFar = RenderSettings.fog && RenderSettings.fogMode == FogMode.Linear ? Mathf.Min(maxFar, RenderSettings.fogEndDistance + 30) : baseFar;
             cam.farClipPlane = Mathf.Lerp(fogFar, Mathf.Max(fogFar, townFarClip), farBlend);
+            // Solo la capa de la ciudad media llega hasta el plano lejano alargado; todo lo demás se corta en la
+            // niebla (si no, cerca del pueblo se dibujaba toda la montaña en 1,6 km)
+            if (layerCull == null) layerCull = new float[32];
+            for (int i = 0; i < 32; i++)
+                layerCull[i] = i == Kurogane.City.CityBuilder.MidCityLayer || i == Kurogane.Atmosphere.SkyDome.SkyLayer ? 0 : fogFar;
+            cam.layerCullDistances = layerCull;
+            cam.layerCullSpherical = true;
             if (cinematic)
             {
                 camPos = shotPosition;
