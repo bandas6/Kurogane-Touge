@@ -15,6 +15,8 @@
 sysinfo.txt
 crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+# Temporales de la compilación de Android (CMake, GameActivity)
+/.utmp/
 
 # IDEs
 .vs/

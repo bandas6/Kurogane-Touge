@@ -67,8 +67,16 @@ Shader "Hidden/Kurogane/PS2Filter"
         int2 p = int2(fmod(floor(i.uv * _MainTex_TexelSize.zw), 4));
         float b = lerp(0.5, Bayer[p.y * 4 + p.x], _Dither);
         const float3 levels = float3(31, 63, 31);
-        c = floor(c * levels + b) / levels;
-        return float4(saturate(c), 1);
+        // Se cuantiza en espacio gamma, como el color de 16 bits de la PS2. En espacio lineal los escalones de
+        // rojo y azul (5 bits) son enormes en las sombras y el tramado tiñe de magenta la noche.
+    #if !defined(UNITY_COLORSPACE_GAMMA)
+        c = LinearToGammaSpace(c);
+    #endif
+        c = saturate(floor(c * levels + b) / levels);
+    #if !defined(UNITY_COLORSPACE_GAMMA)
+        c = GammaToLinearSpace(c);
+    #endif
+        return float4(c, 1);
     }
     ENDCG
 

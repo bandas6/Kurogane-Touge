@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using Kurogane.CameraRig;
+using Kurogane.Atmosphere;
 using Kurogane.Cars;
 using Kurogane.Race;
 using Kurogane.Retro;
@@ -20,6 +21,7 @@ namespace Kurogane.EditorTools
         const string SceneDir = "Assets/Kurogane/Scenes";
         const string ScenePath = SceneDir + "/Prototipo.unity";
         const string ShaderPath = "Assets/Kurogane/Shaders/PS2Filter.shader";
+        public const string SkyShaderPath = "Assets/Kurogane/Shaders/Sky.shader";
         const string MusicDir = "Assets/Kurogane/Audio/Musica";
 
         [MenuItem("Kurogane/Crear escena de prueba", priority = 0)]
@@ -55,10 +57,15 @@ namespace Kurogane.EditorTools
             moon.intensity = 0.35f;
             moon.shadows = LightShadows.Soft;
             moon.transform.rotation = Quaternion.Euler(50, -30, 0);
+            RenderSettings.sun = moon;
 
             var trackGo = new GameObject("Pista");
             var builder = trackGo.AddComponent<TrackBuilder>();
             builder.definition = trackDef;
+
+            // Cielo y horizonte: sigue a la cámara y se genera al arrancar (o se hornea con la pista)
+            var sky = new GameObject("Cielo").AddComponent<SkyDome>();
+            sky.shader = AssetDatabase.LoadAssetAtPath<Shader>(SkyShaderPath);
 
             var playerGo = new GameObject("Jugador");
             var player = playerGo.AddComponent<CarController>();

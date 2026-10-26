@@ -71,6 +71,10 @@ Al llegar a meta la bajada recibe una nota sobre 100:
 
 Si la escena se creó antes de la Fase 4, ejecuta otra vez **Kurogane → Crear escena de prueba** para añadir el filtro, el sonido y la música.
 
+### Cielo y horizonte
+
+`SkyDome` (objeto **Cielo**) dibuja el fondo lejano: cúpula con degradado, unas 800 estrellas, luna con halo, dos anillos de cordilleras, unas 1.800 luces de ciudad en el valle (hacia donde baja la carretera) y bruma baja. Va en un grupo que sigue a la cámara, dentro de una esfera menor que su plano lejano, con un shader sin niebla que se dibuja antes que todo lo demás (`Shaders/Sky.shader`). El horizonte usa el color de la niebla, igual que el fondo de la cámara, para que no se note la unión. Se hornea junto con la pista; las escenas antiguas sin cielo reciben uno al arrancar.
+
 ### Ambiente y horneado
 
 - **Señales** (por código, en pixel art): chevrones en el exterior de cada horquilla, aviso de curva cerrada 70 m antes, límite de 40 en la salida y al salir del túnel, postes kilométricos cada 500 m y rótulo sobre la boca del túnel. Brillan un poco, como el retrorreflectante con los faros.
@@ -103,9 +107,10 @@ Assets/Kurogane/
     Hud/      HudView (HUD y caja de cambios), MenuView (menús, pausa, resultados), TouchControls, UiKit
     Controls/ DriverInput (teclado, mando y táctil)
     Core/     MaterialFactory, ProceduralTextures, MeshKit, DetailCulling
+    Environment/ SkyDome (cielo, luna, cordilleras y luces del valle; namespace Kurogane.Atmosphere)
     Retro/    PS2Filter (imagen a baja resolución, estela, brillo, tramado, 16 bits)
     Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer
-  Shaders/    PS2Filter.shader
+  Shaders/    PS2Filter.shader, Sky.shader
   Audio/      Musica/ (pistas propias, ver LEEME.txt)
   Editor/     Menú "Kurogane": crear escena (KuroganeSceneSetup), hornear (KuroganeBake) y compilar (KuroganeBuild)
   Baked/      Pista horneada e iluminación (los genera el menú)

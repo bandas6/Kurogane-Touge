@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using Kurogane.Atmosphere;
 using Kurogane.CameraRig;
 using Kurogane.Cars;
 using Kurogane.Controls;
@@ -93,6 +94,8 @@ namespace Kurogane.Race
             Ensure<MenuView>();
             Ensure<TouchControls>();
             track.Build();
+            // Escenas creadas antes del cielo (bloque A) no lo traen: se añade uno al arrancar
+            if (FindAnyObjectByType<SkyDome>() == null) new GameObject("Cielo").AddComponent<SkyDome>();
             player.WallHit += OnWallHit;
             player.RivalContact += v => { Water = Mathf.Max(0, Water - v * 0.8f); chaseCamera.Shake(0.4f); };
         }

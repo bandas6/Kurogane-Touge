@@ -144,6 +144,54 @@ namespace Kurogane.Core
             return g.ToTexture("TunnelPanel");
         }
 
+        // ---------- Cielo (SkyDome) ----------
+
+        /// <summary>Disco de luna llena con mares oscuros; fuera del disco, transparente (negro en mezcla aditiva).</summary>
+        public static Texture2D Moon()
+        {
+            var g = new Canvas(32, 32);
+            var r = new System.Random(7);
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                {
+                    float dx = x - 15.5f, dy = y - 15.5f, d = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (d > 14.5f) continue;
+                    float shade = 0.92f - 0.18f * (d / 14.5f) * (d / 14.5f);
+                    g.Set(x, y, new Color(shade, shade * 0.97f, shade * 0.9f, 1));
+                }
+            // mares
+            for (int i = 0; i < 7; i++)
+            {
+                int cx = r.Next(8, 24), cy = r.Next(8, 24), rad = r.Next(2, 5);
+                for (int y = cy - rad; y <= cy + rad; y++)
+                    for (int x = cx - rad; x <= cx + rad; x++)
+                    {
+                        if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > rad * rad) continue;
+                        if (x < 0 || x > 31 || y < 0 || y > 31) continue;
+                        var c = (Color)g.Get(x, y);
+                        if (c.a > 0) g.Set(x, y, c * 0.78f);
+                    }
+            }
+            return g.ToTexture("Luna", false);
+        }
+
+        /// <summary>Punto difuso con caída suave (halo de la luna, bruma del valle). Filtrado bilineal.</summary>
+        public static Texture2D SoftDot()
+        {
+            var g = new Canvas(32, 32);
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                {
+                    float dx = (x - 15.5f) / 15.5f, dy = (y - 15.5f) / 15.5f;
+                    float a = Mathf.Clamp01(1 - Mathf.Sqrt(dx * dx + dy * dy));
+                    a = a * a * (3 - 2 * a);
+                    g.Set(x, y, new Color(a, a, a, a));
+                }
+            var t = g.ToTexture("PuntoSuave", false);
+            t.filterMode = FilterMode.Bilinear;
+            return t;
+        }
+
         // ---------- Señales (Fase 3) ----------
 
         // Fuente de píxel 3×5 para números y rótulos cortos
