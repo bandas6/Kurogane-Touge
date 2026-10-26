@@ -19,7 +19,7 @@ namespace Kurogane.Race
 
     public enum MenuRow
     {
-        Coche, Modo, Rival, Caja, Opciones, Empezar,
+        Coche, Modo, Rival, Caja, Clima, Opciones, Empezar,
         Velocidad, Filtro, Sonido, Musica, Tactil, Resolucion, Pantalla, Vsync, Calidad, Fps, Volver
     }
 
@@ -43,7 +43,8 @@ namespace Kurogane.Race
         [Tooltip("Muestra los fps y el tiempo por cuadro en el HUD, para medir el rendimiento.")]
         public bool showFps;
 
-        static readonly MenuRow[] RacePage = { MenuRow.Coche, MenuRow.Modo, MenuRow.Rival, MenuRow.Caja, MenuRow.Opciones, MenuRow.Empezar };
+        static readonly MenuRow[] RacePage = { MenuRow.Coche, MenuRow.Modo, MenuRow.Rival, MenuRow.Caja, MenuRow.Clima, MenuRow.Opciones, MenuRow.Empezar };
+        static readonly string[] WeatherNames = { "Despejado", "Amanecer", "Atardecer", "Niebla", "Lluvia", "Al azar" };
         static readonly MenuRow[] OptionsPageDesktop =
         {
             MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil,
@@ -93,6 +94,7 @@ namespace Kurogane.Race
             chaseCamera.Snap();
             if (retro != null) retro.ResetHistory();
             SetShowroomLight(true);
+            if (weatherSystem != null) weatherSystem.RefreshCars(); // faros y conos del coche recién construido
             best = LoadBest();
         }
 
@@ -189,6 +191,10 @@ namespace Kurogane.Race
                     break;
                 case MenuRow.Rival: rivalSkill = (RivalSkill)(((int)rivalSkill + dir + 3) % 3); break;
                 case MenuRow.Caja: manualGearbox = !manualGearbox; break;
+                case MenuRow.Clima:
+                    weather = (weather + dir + WeatherNames.Length) % WeatherNames.Length;
+                    ApplyWeather(true);
+                    break;
                 case MenuRow.Velocidad: useMph = !useMph; break;
                 case MenuRow.Filtro: retroFilter = !retroFilter; break;
                 case MenuRow.Sonido: soundVolume = Mathf.Clamp(soundVolume + dir, 0, 10); break;
@@ -249,6 +255,7 @@ namespace Kurogane.Race
                 case MenuRow.Modo: return mode == RaceMode.Batalla ? "Batalla" : "Contrarreloj";
                 case MenuRow.Rival: return mode == RaceMode.Batalla ? SkillNames[(int)rivalSkill] : "—";
                 case MenuRow.Caja: return manualGearbox ? "Manual (Q / E)" : "Automática";
+                case MenuRow.Clima: return WeatherNames[Mathf.Clamp(weather, 0, WeatherNames.Length - 1)];
                 case MenuRow.Velocidad: return useMph ? "mph" : "km/h";
                 case MenuRow.Filtro: return retro == null ? "No disponible" : retroFilter ? "Sí" : "No";
                 case MenuRow.Sonido: return Bar(soundVolume);

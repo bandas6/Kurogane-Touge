@@ -79,6 +79,20 @@ namespace Kurogane.Core
             return m;
         }
 
+        /// <summary>
+        /// El smoothness sale del alfa de la textura por _Smoothness (solo URP Lit): así el asfalto lleva una máscara
+        /// de charcos que solo brilla cuando el clima sube el smoothness (lluvia).
+        /// </summary>
+        public static Material SmoothnessFromAlpha(this Material m)
+        {
+            if (m.HasProperty("_SmoothnessTextureChannel"))
+            {
+                m.SetFloat("_SmoothnessTextureChannel", 1);
+                m.EnableKeyword("_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A");
+            }
+            return m;
+        }
+
         /// <summary>Dibuja ambas caras (solo URP; en el pipeline integrado se ignora).</summary>
         public static Material DoubleSided(this Material m)
         {

@@ -121,6 +121,7 @@ namespace Kurogane.EditorTools
 
             foreach (var l in root.GetComponentsInChildren<Light>(true)) l.lightmapBakeType = LightmapBakeType.Baked;
             AddLightProbes(builder, root);
+            AddReflectionProbes(builder, root);
 
             // Lightmaps pequeños y sin direccionalidad: con el filtro PS2 no hace falta más
             var settings = new LightingSettings
@@ -202,6 +203,29 @@ namespace Kurogane.EditorTools
                         points.Add(go.transform.InverseTransformPoint(p.pos + p.right * lat + Vector3.up * h));
             }
             group.probePositions = points.ToArray();
+        }
+
+        /// <summary>
+        /// Sondas de reflexión horneadas a lo largo de la carretera y en el pueblo: con el asfalto mojado (lluvia) los
+        /// faroles se reflejan sin reflejos en espacio de pantalla. Resolución baja, como pide el filtro PS2.
+        /// </summary>
+        static void AddReflectionProbes(TrackBuilder builder, Transform root)
+        {
+            var existing = root.Find("Reflejos");
+            if (existing != null) Object.DestroyImmediate(existing.gameObject);
+            var parent = new GameObject("Reflejos").transform;
+            parent.SetParent(root, false);
+            var d = new TrackData(builder.definition != null ? builder.definition : ScriptableObject.CreateInstance<TrackDefinition>());
+            for (int i = 10; i < d.N; i += d.InTown(i) ? 30 : 70)
+            {
+                var probe = new GameObject("Reflejo").AddComponent<ReflectionProbe>();
+                probe.transform.SetParent(parent, false);
+                probe.transform.position = d.P[i].pos + Vector3.up * 2;
+                probe.mode = ReflectionProbeMode.Baked;
+                probe.size = new Vector3(70, 30, 70);
+                probe.resolution = 64;
+                probe.hdr = false;
+            }
         }
 
         static TrackBuilder FindBuilder()

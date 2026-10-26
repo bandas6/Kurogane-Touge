@@ -21,7 +21,7 @@ namespace Kurogane.CameraRig
         [Tooltip("0 = plano lejano en la niebla de la montaña; 1 = lejos, para ver la ciudad del valle desde el pueblo.")]
         [Range(0, 1)] public float farBlend;
         public float townFarClip = 1600;
-        float baseFar;
+        float baseFar, maxFar;
 
         Camera cam;
         float camHeading;
@@ -35,6 +35,7 @@ namespace Kurogane.CameraRig
         void Awake()
         {
             cam = GetComponent<Camera>();
+            maxFar = cam.farClipPlane;
             // Más allá del final de la niebla lineal todo es del color del fondo: no hace falta dibujarlo
             if (RenderSettings.fog && RenderSettings.fogMode == FogMode.Linear)
                 cam.farClipPlane = Mathf.Min(cam.farClipPlane, RenderSettings.fogEndDistance + 30);
@@ -62,8 +63,10 @@ namespace Kurogane.CameraRig
             float h = target.Heading, sp = target.Speed;
             var fwd = new Vector3(Mathf.Sin(h), 0, Mathf.Cos(h));
             Vector3 look;
-            // La ciudad del valle (más allá de la niebla) solo se dibuja cerca del pueblo
-            cam.farClipPlane = Mathf.Lerp(baseFar, Mathf.Max(baseFar, townFarClip), farBlend);
+            // El plano lejano sigue a la niebla del clima (con niebla densa se dibuja mucho menos), y la ciudad del
+            // valle, más allá de la niebla, solo se dibuja cerca del pueblo
+            float fogFar = RenderSettings.fog && RenderSettings.fogMode == FogMode.Linear ? Mathf.Min(maxFar, RenderSettings.fogEndDistance + 30) : baseFar;
+            cam.farClipPlane = Mathf.Lerp(fogFar, Mathf.Max(fogFar, townFarClip), farBlend);
             if (cinematic)
             {
                 camPos = shotPosition;
