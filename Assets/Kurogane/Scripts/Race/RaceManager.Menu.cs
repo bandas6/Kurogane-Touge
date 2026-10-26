@@ -284,9 +284,17 @@ namespace Kurogane.Race
         // ---------- Opciones ----------
 
         /// <summary>Aplica filtro y volúmenes; se llama al cargar y cada vez que cambian en el menú.</summary>
-        void ApplyOptions()
+        internal void ApplyOptions()
         {
-            if (retro != null) retro.enabled = retroFilter;
+            if (retro != null)
+            {
+                // En el móvil, sin filtro se sigue dibujando a 540 líneas (sin efectos): a la resolución nativa
+                // de la pantalla el Redmi Note 11 bajaba a 40 fps, y a 720 líneas se quedaba en 48
+                bool mobileScale = !retroFilter && Application.isMobilePlatform;
+                retro.enabled = retroFilter || mobileScale;
+                retro.effects = retroFilter;
+                retro.height = retroFilter ? 448 : 540;
+            }
             CarAudio.MasterVolume = soundVolume / 10f;
             if (music != null) music.volume = musicVolume / 10f;
         }

@@ -25,6 +25,9 @@ namespace Kurogane.Retro
         public bool sharpPixels;
         [Tooltip("Gotas de lluvia en pantalla (lo fija el clima).")]
         [Range(0, 1)] public float rain;
+        [Tooltip("Efectos PS2. Apagado solo reescala la imagen: en el móvil se usa con el filtro desactivado en el menú, " +
+                 "para no dibujar a la resolución nativa de la pantalla.")]
+        public bool effects = true;
 
         static readonly int DropsId = Shader.PropertyToID("_Drops");
         static readonly int RainId = Shader.PropertyToID("_Rain");
@@ -96,7 +99,13 @@ namespace Kurogane.Retro
         void LateUpdate()
         {
             if (EnsureTargets()) return; // texturas nuevas: la cámara aún no ha dibujado en ellas
-            Composite();
+            if (effects) Composite();
+            else
+            {
+                var previous = RenderTexture.active;
+                Graphics.Blit(frame, output);
+                RenderTexture.active = previous;
+            }
             screen.texture = output;
             screen.color = Color.white;
         }

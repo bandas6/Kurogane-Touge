@@ -9,8 +9,8 @@ namespace Kurogane.Atmosphere
     /// <summary>
     /// Cielo y horizonte lejano, como en el prototipo web: cúpula con degradado, estrellas, luna con halo, dos
     /// anillos de cordilleras, luces de ciudad en el valle y bruma baja. Todo va en un grupo que sigue a la
-    /// cámara (sin rotar), dentro de una esfera menor que su plano lejano, con materiales sin niebla dibujados
-    /// primero (cola Background). No hace falta ampliar el plano lejano ni una segunda cámara.
+    /// cámara (sin rotar), en una esfera justo dentro de su plano lejano, con materiales sin niebla dibujados
+    /// después de lo opaco con prueba de profundidad (solo rellenan lo que nada tapa). Sin segunda cámara.
     /// El horizonte toma el color de la niebla, y el fondo de la cámara también, para que no se note la unión.
     /// Namespace Atmosphere y no Environment: este último ocultaría System.Environment.
     /// </summary>
@@ -32,6 +32,10 @@ namespace Kurogane.Atmosphere
         public bool baked;
 
         const string RootName = "Generated";
+        /// <summary>Cola de dibujo: tras lo opaco (2000-2450) y antes de lo transparente (3000).</summary>
+        const int Queue = 2460;
+        /// <summary>Capa del cielo: ChaseCamera no la recorta en la niebla (llega hasta su plano lejano).</summary>
+        public const int SkyLayer = 31;
 
         public Transform Root => root;
 
@@ -73,15 +77,17 @@ namespace Kurogane.Atmosphere
             white.Apply();
             var soft = ProceduralTextures.SoftDot();
 
-            var dome = Material(white, false, 1000);
+            // Se dibuja justo después de lo opaco con prueba de profundidad: solo pinta lo que nada tapa
+            // (en el móvil, dibujarlo primero y taparlo costaba casi 0,8 ms de GPU)
+            var dome = Material(white, false, Queue);
             dome.SetFloat("_Gradient", 1);
             Add(DomeName, Dome(), dome);
-            Add("Cordillera lejana", Ridge(0.97f, 9, 0.35f, valley, Color.Lerp(horizon, new Color(0.04f, 0.045f, 0.08f), 0.55f)), Material(white, false, 1001));
-            Add("Ciudad lejana", Skyline(valley), Material(white, false, 1002));
-            Add("Cordillera cercana", Ridge(0.93f, 6, 0.6f, valley, new Color(0.018f, 0.022f, 0.04f)), Material(white, false, 1003));
-            Add(StarsName, Points(valley, out var valleyMesh), Material(white, true, 1004));
-            Add(ValleyName, valleyMesh, Material(white, true, 1004));
-            Add(MistName, Mist(valley), Material(soft, true, 1005));
+            Add("Cordillera lejana", Ridge(0.97f, 9, 0.35f, valley, Color.Lerp(horizon, new Color(0.04f, 0.045f, 0.08f), 0.55f)), Material(white, false, Queue + 1));
+            Add("Ciudad lejana", Skyline(valley), Material(white, false, Queue + 2));
+            Add("Cordillera cercana", Ridge(0.93f, 6, 0.6f, valley, new Color(0.018f, 0.022f, 0.04f)), Material(white, false, Queue + 3));
+            Add(StarsName, Points(valley, out var valleyMesh), Material(white, true, Queue + 4));
+            Add(ValleyName, valleyMesh, Material(white, true, Queue + 4));
+            Add(MistName, Mist(valley), Material(soft, true, Queue + 5));
             BuildMoon(soft);
             SetWeather(horizon, zenith, ground, Color.clear, 1, 1, 1, 0);
         }
@@ -134,8 +140,9 @@ namespace Kurogane.Atmosphere
             if (cam == null || !cam.isActiveAndEnabled) cam = Camera.main;
             if (cam == null) return;
             transform.SetPositionAndRotation(cam.transform.position, Quaternion.identity);
-            // Siempre dentro del plano lejano, con margen
-            float s = Mathf.Min(1, cam.farClipPlane * 0.9f / radius);
+            // Justo antes del plano lejano: con la prueba de profundidad, todo lo que la cámara dibuja queda delante
+            // (incluida la ciudad del valle cuando el plano lejano se alarga cerca del pueblo)
+            float s = cam.farClipPlane * 0.95f / radius;
             transform.localScale = Vector3.one * s;
             if (matchFog) cam.backgroundColor = RenderSettings.fogColor;
         }
@@ -335,10 +342,10 @@ namespace Kurogane.Atmosphere
             var pos = Dir(az, elev) * radius * 0.96f;
             var v = new List<Vector3>(); var c = new List<Color>(); var uv = new List<Vector2>(); var t = new List<int>();
             Quad(v, c, uv, t, pos, 26, new Color(0.55f, 0.6f, 0.8f) * 0.22f);
-            Add("Halo", Finish(v, c, uv, t), Material(soft, true, 1006));
+            Add("Halo", Finish(v, c, uv, t), Material(soft, true, Queue + 6));
             v.Clear(); c.Clear(); uv.Clear(); t.Clear();
             Quad(v, c, uv, t, pos * 0.995f, 5.5f, new Color(1f, 0.98f, 0.9f));
-            Add("Luna", Finish(v, c, uv, t), Material(ProceduralTextures.Moon(), true, 1007));
+            Add("Luna", Finish(v, c, uv, t), Material(ProceduralTextures.Moon(), true, Queue + 7));
         }
 
         // ---------- Utilidades ----------
@@ -407,7 +414,7 @@ namespace Kurogane.Atmosphere
         void Add(string name, Mesh mesh, Material mat)
         {
             mesh.name = name;
-            var go = new GameObject(name);
+            var go = new GameObject(name) { layer = SkyLayer };
             go.transform.SetParent(root, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var mr = go.AddComponent<MeshRenderer>();

@@ -1,5 +1,6 @@
 // Cielo de Kurogane Touge (SkyDome): color por vértice por la textura, sin niebla ni luces.
-// Se dibuja en la cola Background sin escribir profundidad, así todo lo demás queda delante.
+// La cúpula se dibuja después de lo opaco (cola 2460) sin escribir profundidad y con prueba de profundidad:
+// solo rellena los píxeles que nada tapa.
 // La ciudad media del valle lo usa en la cola Geometry y con _ZWrite = 1 (sin niebla, con profundidad).
 // Con _Gradient = 1 (la cúpula) el color sale de la elevación: suelo, horizonte, franja y cenit. El clima
 // (WeatherSystem) cambia esos colores y _Tint con MaterialPropertyBlock, sin tocar los materiales horneados.

@@ -123,6 +123,32 @@ El único cambio de física es `CarController.GripScale` / `DriftGripScale`, que
 - El HUD solo rehace un texto cuando cambia el número que muestra.
 - En Android: 60 fps fijos, *frame pacing* activado, sin HDR en el perfil de URP para móvil y filtro PS2 con texturas de 8 bits.
 - **Opciones → Ver FPS** muestra los fps y los milisegundos por cuadro. Para medir en un móvil, haz una build de desarrollo y usa también el Profiler de Unity conectado al dispositivo.
+- El cielo se dibuja después de lo opaco con prueba de profundidad (solo rellena lo que nada tapa). Cerca del pueblo la cámara alarga el plano lejano, pero con `layerCullDistances` solo llegan lejos la ciudad del valle (capa 30) y el cielo (capa 31).
+- En el perfil de URP para móvil: sin sombras y con las luces adicionales por vértice. Con el filtro PS2 apagado, en móvil se sigue dibujando a 540 líneas (sin efectos).
+
+#### Benchmark en Android
+
+Con el APK de desarrollo (**Kurogane → Compilar → Android APK de desarrollo**) instalado, el juego recorre solo ocho escenas de 20 s y escribe los resultados en el log:
+
+```powershell
+adb shell am start -n com.bandas6.kuroganetouge/com.unity3d.player.UnityPlayerGameActivity -e unity "-kuroganeBench"
+adb logcat -s Unity | Select-String KuroganeBench
+```
+
+Medido en un Redmi Note 11 (Snapdragon 680, Adreno 610, Vulkan, 2400×1080), con el filtro PS2:
+
+| Escena | fps | GPU por cuadro |
+|---|---|---|
+| Montaña | 59,9 | 13,0 ms |
+| Montaña sin cielo | 59,9 | 12,6 ms (el cielo cuesta 0,4 ms) |
+| Montaña sin filtro PS2 | 59,9 | 12,8 ms |
+| Lluvia | 59,9 | 13,4 ms |
+| Lluvia sin partículas | 59,9 | 12,9 ms (la lluvia cuesta 0,45 ms) |
+| Niebla | 59,9 | 12,6 ms |
+| Tráfico | 59,9 | 13,5 ms |
+| Llegada al pueblo | 59,9 | 13,2 ms |
+
+En ninguna escena hubo cuadros por encima de 16,8 ms.
 
 ## Estructura
 
