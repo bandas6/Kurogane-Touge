@@ -135,6 +135,7 @@ namespace Kurogane.Track
             BuildPosts();
             BuildLamps();
             BuildTunnel();
+            BuildLandmarks();
             BuildForest();
             BuildBanner(StartBanner, 8, new Color(0.72f, 0.07f, 0.16f));
             BuildBanner(GoalBanner, d.FinishIndex + 1, new Color(0.11f, 0.16f, 0.5f));
@@ -478,7 +479,7 @@ namespace Kurogane.Track
                     float dx = pos.x - d.P[j].pos.x, dz = pos.z - d.P[j].pos.z;
                     if (dx * dx + dz * dz < (d.HW[j] + 3) * (d.HW[j] + 3)) { ok = false; break; }
                 }
-                if (!ok) continue;
+                if (!ok || InsideLandmark(pos)) continue;
                 pos.y = d.TerrainY(i, s, lat) - 0.2f;
                 float sc = Mathf.Lerp(0.75f, 1.5f, (float)rng.NextDouble()), hs = sc * Mathf.Lerp(0.95f, 1.35f, (float)rng.NextDouble());
                 var rot = Quaternion.Euler(0, (float)rng.NextDouble() * 360, 0);
@@ -508,9 +509,43 @@ namespace Kurogane.Track
             var leaves = primary == Vegetation.ArcesOtono
                 ? new[] { new Color(0.42f, 0.07f, 0.04f), new Color(0.5f, 0.2f, 0.04f), new Color(0.45f, 0.33f, 0.06f) }
                 : new[] { new Color(0.12f, 0.2f, 0.08f), new Color(0.15f, 0.24f, 0.09f), new Color(0.1f, 0.17f, 0.08f) };
-            var sphere = Primitive(PrimitiveType.Sphere);
-            for (int t = 0; t < 3; t++) AddCombined("Leafy", sphere, crowns[t], MaterialFactory.Lit(leaves[t], null, 0));
+            // Copa de 48 triángulos (la esfera de Unity tiene 768 y hay dos por árbol: en el móvil costaba más de 1 ms)
+            var crownMesh = LowSphere(8, 4);
+            for (int t = 0; t < 3; t++) AddCombined("Leafy", crownMesh, crowns[t], MaterialFactory.Lit(leaves[t], null, 0));
             AddCombined("Trunks", Primitive(PrimitiveType.Cylinder), trunks, MaterialFactory.Lit(new Color(0.17f, 0.12f, 0.09f)));
+        }
+
+        /// <summary>Esfera de diámetro 1 con pocos lados (sombreado plano), para las copas de los árboles.</summary>
+        static Mesh LowSphere(int sides, int rings)
+        {
+            var v = new List<Vector3>();
+            var t = new List<int>();
+            Vector3 P(int ring, int side)
+            {
+                float a = side / (float)sides * Mathf.PI * 2, e = Mathf.PI * ring / rings - Mathf.PI / 2;
+                return new Vector3(Mathf.Cos(e) * Mathf.Cos(a), Mathf.Sin(e), Mathf.Cos(e) * Mathf.Sin(a)) * 0.5f;
+            }
+            for (int r = 0; r < rings; r++)
+                for (int s = 0; s < sides; s++)
+                {
+                    var a = P(r, s); var b = P(r, s + 1); var c = P(r + 1, s + 1); var d = P(r + 1, s);
+                    int o = v.Count;
+                    // Triángulos sueltos: caras planas, como el resto del bosque
+                    if (r > 0) { v.Add(a); v.Add(d); v.Add(b); t.Add(o); t.Add(o + 1); t.Add(o + 2); o += 3; }
+                    if (r < rings - 1) { v.Add(b); v.Add(d); v.Add(c); t.Add(o); t.Add(o + 1); t.Add(o + 2); }
+                }
+            // Cada cara mirando hacia fuera (con su centro)
+            for (int i = 0; i < t.Count; i += 3)
+            {
+                Vector3 p0 = v[t[i]], p1 = v[t[i + 1]], p2 = v[t[i + 2]];
+                if (Vector3.Dot(Vector3.Cross(p1 - p0, p2 - p0), p0 + p1 + p2) < 0) { int tmp = t[i + 1]; t[i + 1] = t[i + 2]; t[i + 2] = tmp; }
+            }
+            var m = new Mesh();
+            m.SetVertices(v);
+            m.SetTriangles(t, 0);
+            m.RecalculateNormals();
+            m.RecalculateBounds();
+            return m;
         }
 
         /// <summary>Cono de base 1 y altura 1, con la base en y=0.</summary>

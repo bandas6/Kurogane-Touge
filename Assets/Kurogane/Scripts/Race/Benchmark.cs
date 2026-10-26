@@ -23,15 +23,30 @@ namespace Kurogane.Race
         RaceManager race;
         readonly FrameTiming[] timing = new FrameTiming[1];
 
-        public static bool Requested()
+        /// <summary>
+        /// Si se pidió el benchmark. <paramref name="track"/> es la pista elegida (id de su TrackDefinition) con
+        /// <c>-kuroganeBench=Usuba</c> o con el id escrito en benchmark.txt; vacío = la primera del catálogo.
+        /// </summary>
+        public static bool Requested(out string track)
         {
             bool arg = false;
+            track = "";
             foreach (var a in Environment.GetCommandLineArgs())
-                if (a == "-kuroganeBench") arg = true;
+                if (a == "-kuroganeBench" || a.StartsWith("-kuroganeBench="))
+                {
+                    arg = true;
+                    if (a.Length > "-kuroganeBench=".Length) track = a.Substring("-kuroganeBench=".Length).Trim();
+                }
             // El archivo se borra siempre, también si llegó el argumento: si no, el siguiente arranque normal volvía a medir
             var file = Path.Combine(Application.persistentDataPath, "benchmark.txt");
             if (!File.Exists(file)) return arg;
-            try { File.Delete(file); } catch (Exception) { }
+            try
+            {
+                var content = File.ReadAllText(file).Trim();
+                if (content.Length > 1 && track.Length == 0) track = content;
+                File.Delete(file);
+            }
+            catch (Exception) { }
             return true;
         }
 

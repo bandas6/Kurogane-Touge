@@ -100,7 +100,8 @@ namespace Kurogane.Cars
             var a = d.P[i];
             var b = d.P[Mathf.Min(d.N - 1, i + 1)];
             float lane = Mathf.Lerp(d.Lane[i], d.Lane[Mathf.Min(d.N - 1, i + 1)], f);
-            lane = Mathf.Lerp(lane, ParkLane, park);
+            // En calzadas estrechas aparca pegado al borde, sin salirse
+            lane = Mathf.Lerp(lane, Mathf.Min(ParkLane, d.HW[i] - 1.2f), park);
             var pos = Vector3.Lerp(a.pos, b.pos, f) + a.right * lane;
             float k = 0;
             for (int j = 0; j < 8; j++) k += d.P[Mathf.Clamp(i + j, 0, d.N - 1)].k;

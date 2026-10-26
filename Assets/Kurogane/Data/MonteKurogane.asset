@@ -20,7 +20,7 @@ MonoBehaviour:
   theme: {fileID: 0}
   allowUphill: 1
   parTime: 120
-  parTimeUphill: 0
+  parTimeUphill: 117
   step: 2
   halfWidth: 5.2
   slope: 0.055

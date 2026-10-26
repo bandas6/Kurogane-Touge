@@ -102,7 +102,7 @@ namespace Kurogane.Race
             int i = player.Index;
             int look = Mathf.Min(d.N - 1, i + 5 + Mathf.RoundToInt(player.Speed * 0.35f));
             // Bajando se pasa al carril izquierdo a lo largo de la entrada al pueblo; subiendo, en unos 50 m tras la meta
-            float lane = Mathf.Lerp(0, arrivalLane, Mathf.InverseLerp(d.FinishIndex, d.Uphill ? d.FinishIndex + 25 : d.TownStart, look));
+            float lane = Mathf.Lerp(0, Mathf.Max(arrivalLane, -(d.HW[look] - 1.2f)), Mathf.InverseLerp(d.FinishIndex, d.Uphill ? d.FinishIndex + 25 : d.TownStart, look));
             var p = d.P[look];
             var to = p.pos + p.right * lane - player.transform.position;
             float want = Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;

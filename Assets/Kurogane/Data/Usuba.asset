@@ -1,0 +1,572 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a75bde26e257ba46869cd9a5e695e1b, type: 3}
+  m_Name: Usuba
+  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Track.TrackDefinition
+  id: Usuba
+  displayName: "Usuba-t\u014Dge"
+  japaneseName: "\u8584\u8449\u5CE0"
+  description: 'Carretera vieja y estrecha, sin faroles: curvas cortas una tras otra entre el bosque cerrado, con un viaducto de ladrillo de cuatro arcos al otro lado del valle.'
+  theme: {fileID: 11400000, guid: bdec06dad658c2e41b0ded8a27c2b741, type: 2}
+  allowUphill: 1
+  parTime: 187
+  parTimeUphill: 183
+  rivalCornerGrip: 10
+  rivalTopSpeed: 52
+  landmarks:
+  - kind: 0
+    atMeters: 1640
+    side: 0
+    lateral: 48
+    length: 92
+  step: 2
+  halfWidth: 3.5
+  slope: 0.062
+  hairpinSlope: 0.04
+  afterGoalSlope: 0.03
+  segments:
+  - type: 0
+    angle: 0
+    lengthOrRadius: 60
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 50
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -50
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 20
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 3
+    angle: 45
+    lengthOrRadius: 80
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -65
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 75
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 25
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -55
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 55
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 3
+    angle: -50
+    lengthOrRadius: 80
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 30
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 70
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -70
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 20
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 3
+    angle: 40
+    lengthOrRadius: 70
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -40
+    lengthOrRadius: 35
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 30
+    lengthOrRadius: 35
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 2
+    angle: -170
+    lengthOrRadius: 13
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 70
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 2
+    angle: 170
+    lengthOrRadius: 13
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 60
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -60
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 3
+    angle: -45
+    lengthOrRadius: 80
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 25
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 80
+    lengthOrRadius: 50
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -80
+    lengthOrRadius: 50
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 20
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 3
+    angle: 50
+    lengthOrRadius: 80
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -45
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 45
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 30
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -70
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 70
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 3
+    angle: 55
+    lengthOrRadius: 90
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 25
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -60
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 40
+    lengthOrRadius: 35
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 20
+    lengthOrRadius: 30
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 2
+    angle: 170
+    lengthOrRadius: 13
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 70
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 2
+    angle: -170
+    lengthOrRadius: 13
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 65
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -65
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 3
+    angle: -50
+    lengthOrRadius: 80
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 20
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 75
+    lengthOrRadius: 50
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -55
+    lengthOrRadius: 45
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -20
+    lengthOrRadius: 30
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 25
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 3
+    angle: 45
+    lengthOrRadius: 80
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -60
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 60
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 30
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: -50
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 50
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 3
+    angle: -40
+    lengthOrRadius: 70
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 60
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 30
+    lengthOrRadius: 40
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 100
+    tunnel: 0
+    afterGoal: 0
+    halfWidth: 0
+    slope: 0
+    bridge: 0
+  - type: 1
+    angle: 25
+    lengthOrRadius: 60
+    tunnel: 0
+    afterGoal: 1
+    halfWidth: 4.6
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 120
+    tunnel: 0
+    afterGoal: 1
+    halfWidth: 4.6
+    slope: 0
+    bridge: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 120
+    tunnel: 0
+    afterGoal: 1
+    halfWidth: 4.6
+    slope: 0
+    bridge: 0
