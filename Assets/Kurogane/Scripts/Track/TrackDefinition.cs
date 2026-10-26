@@ -10,6 +10,23 @@ namespace Kurogane.Track
 
     public enum TrackDirection { Bajada, Subida }
 
+    public enum LandmarkKind { Viaducto }
+
+    /// <summary>Decorado propio de una pista junto a la carretera (no se puede pisar).</summary>
+    [Serializable]
+    public struct Landmark
+    {
+        public LandmarkKind kind;
+        [Tooltip("Metros desde la salida de bajada donde queda el centro del monumento.")]
+        public float atMeters;
+        [Tooltip("Lado: +1 derecha, -1 izquierda (en bajada), 0 = el lado donde el terreno cae.")]
+        public int side;
+        [Tooltip("Distancia del centro de la carretera al monumento, en metros.")]
+        public float lateral;
+        [Tooltip("Largo del monumento, en metros.")]
+        public float length;
+    }
+
     [Serializable]
     public struct TrackSegment
     {
@@ -69,6 +86,15 @@ namespace Kurogane.Track
         public float parTime = 120;
         [Tooltip("Tiempo de referencia de subida (s). 0 = el de bajada.")]
         public float parTimeUphill;
+
+        [Header("Rival")]
+        [Tooltip("Aceleración lateral (m/s²) con la que el rival calcula la velocidad en curva. En calzadas estrechas su trazada es más cerrada y conviene bajarla.")]
+        public float rivalCornerGrip = 10.5f;
+        [Tooltip("Velocidad máxima del rival en m/s (52 ≈ 187 km/h).")]
+        public float rivalTopSpeed = 52;
+
+        [Header("Decorado propio")]
+        public List<Landmark> landmarks = new List<Landmark>();
 
         [Header("Trazado")]
         [Tooltip("Separación entre puntos de la línea central, en metros.")]

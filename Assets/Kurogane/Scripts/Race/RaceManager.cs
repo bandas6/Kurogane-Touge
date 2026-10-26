@@ -114,8 +114,8 @@ namespace Kurogane.Race
             Ensure<HudView>();
             Ensure<MenuView>();
             Ensure<TouchControls>();
-            // Benchmark para el móvil (ver Benchmark.cs): desde Inicio lo corre la primera pista, de bajada
-            bool bench = GameSession.Benchmark || Benchmark.Requested();
+            // Benchmark para el móvil (ver Benchmark.cs): desde Inicio lo corre la pista pedida (o la primera), de bajada
+            bool bench = Benchmark.Requested(out string benchTrack) || GameSession.Benchmark;
             GameSession.Benchmark = false;
             if (frontEnd)
             {
@@ -123,6 +123,8 @@ namespace Kurogane.Race
                 if (bench)
                 {
                     GameSession.Benchmark = true;
+                    var list = Tracks;
+                    trackId = list.Exists(t => t.Id == benchTrack) ? benchTrack : list.Count > 0 ? list[0].Id : trackId;
                     direction = TrackDirection.Bajada;
                     LoadSelectedTrack();
                 }

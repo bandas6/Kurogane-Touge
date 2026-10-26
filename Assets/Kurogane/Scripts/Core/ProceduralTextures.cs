@@ -160,7 +160,27 @@ namespace Kurogane.Core
             return g.ToTexture("RockWall");
         }
 
-        /// <summary>Muro de piedra seca en hiladas (石垣), como los de las carreteras viejas.</summary>
+        /// <summary>Ladrillo rojo en aparejo inglés, ennegrecido por el hollín de los trenes de vapor (viaducto).</summary>
+        public static Texture2D Brick()
+        {
+            var g = new Canvas(64, 64);
+            g.Fill(H("#4a3a32"));
+            var bricks = new[] { H("#7a3b28"), H("#6d3424"), H("#843f2b"), H("#5e2f22") };
+            for (int row = 0; row < 16; row++)
+            {
+                bool headers = row % 2 == 1;
+                int w = headers ? 4 : 8, x = headers ? -2 : 0;
+                for (; x < 64; x += w) g.Rect(x, row * 4, w - 1, 3, bricks[R(0, bricks.Length)]);
+            }
+            g.Speck(260, new[] { H("#3a2820"), H("#8f4a33") });
+            for (int i = 0; i < 10; i++) g.Blend(R(0, 64), R(0, 64), R(6, 16), R(4, 12), H("#1a1412"), 0.25f);
+            return g.ToTexture("Brick");
+        }
+
+        /// <summary>
+        /// Muro de piedra seca en hiladas (石垣), como los de las carreteras viejas. Las hiladas van a lo largo de v:
+        /// el muro de la pista mapea u en altura y v a lo largo de la carretera.
+        /// </summary>
         public static Texture2D StoneWall()
         {
             var g = new Canvas(64, 64);
@@ -168,13 +188,13 @@ namespace Kurogane.Core
             var stones = new[] { H("#7a766c"), H("#6a665d"), H("#858176"), H("#5f5c55") };
             for (int row = 0; row < 8; row++)
             {
-                int x = row % 2 == 0 ? 0 : -6;
-                while (x < 64)
+                int y = row % 2 == 0 ? 0 : -6;
+                while (y < 64)
                 {
                     int w = R(9, 16);
-                    g.Rect(x + 1, row * 8 + 1, w - 2, 6, stones[R(0, stones.Length)]);
-                    g.Blend(x + 1, row * 8 + 6, w - 2, 1, H("#000000"), 0.3f);
-                    x += w;
+                    g.Rect(row * 8 + 1, y + 1, 6, w - 2, stones[R(0, stones.Length)]);
+                    g.Blend(row * 8 + 6, y + 1, 1, w - 2, H("#000000"), 0.3f);
+                    y += w;
                 }
             }
             g.Speck(220, new[] { H("#3d4a2e"), H("#2f3a24") });

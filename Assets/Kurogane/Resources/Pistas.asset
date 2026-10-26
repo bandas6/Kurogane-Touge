@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Track.TrackCatalog
   tracks:
   - {fileID: 11400000, guid: cfa58f668e015c34b912f56200e8747d, type: 2}
+  - {fileID: 11400000, guid: efede2883aeaa3d43aa66282a29101f3, type: 2}

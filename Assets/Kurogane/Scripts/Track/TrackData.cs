@@ -93,10 +93,14 @@ namespace Kurogane.Track
         readonly float[][] off = new float[2][], dy = new float[2][], plat = new float[2][];
 
         const float Brake = 9;
+        // Perfil del rival de la pista: aceleración lateral en curva y velocidad máxima
+        readonly float cornerGrip = 10.5f, topSpeed = 52;
 
         public TrackData(TrackDefinition def)
         {
             Direction = TrackDirection.Bajada;
+            cornerGrip = def.rivalCornerGrip > 0 ? def.rivalCornerGrip : 10.5f;
+            topSpeed = def.rivalTopSpeed > 0 ? def.rivalTopSpeed : 52;
             Step = def.step;
             W = def.halfWidth;
             var pts = new List<TrackPoint>();
@@ -188,6 +192,8 @@ namespace Kurogane.Track
         {
             source = g;
             Direction = TrackDirection.Subida;
+            cornerGrip = g.cornerGrip;
+            topSpeed = g.topSpeed;
             Step = g.Step;
             W = g.W;
             N = g.N;
@@ -271,7 +277,7 @@ namespace Kurogane.Track
                 ks /= 13;
                 ksm[i] = ks;
                 float r = Mathf.Abs(ks) > 1e-4f ? 1 / Mathf.Abs(ks) : 1e4f;
-                vmax[i] = Mathf.Min(52, Mathf.Sqrt(10.5f * r));
+                vmax[i] = Mathf.Min(topSpeed, Mathf.Sqrt(cornerGrip * r));
                 float kl = 0;
                 for (int j = -14; j <= 14; j++) kl += P[Clamp(i + j + 6)].k;
                 kl /= 29;

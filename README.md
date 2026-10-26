@@ -30,6 +30,15 @@ Cada pista es un asset `TrackDefinition` (nombre, nombre en japonés, descripci�
 
 Para crear una pista: **Assets → Create → Kurogane → Track Definition** (o **Nueva pista** en la herramienta), rellena los tramos, revísala en la ventana y pulsa **Crear escena y hornear**.
 
+Cada pista ajusta también el perfil del rival (aceleración lateral en curva y velocidad máxima) y su tiempo de referencia de la nota, y puede llevar decorado propio (`landmarks`, por ahora el viaducto de ladrillo).
+
+| Pista | Carácter | Datos |
+|---|---|---|
+| **Monte Kurogane (黒鉄峠)** | Rápida y variada: horquillas con canaleta, túnel y el pueblo de la tienda de tofu | 2,3 km · 14 curvas · 4 horquillas · 1 túnel · referencia 120 s (subida 117 s) |
+| **Usuba-tōge (薄葉峠)** | Carretera vieja muy estrecha (medio ancho 3,5 m) sin faroles: curvas cortas sin respiro entre bosque cerrado de hoja ancha y cedros, muros de piedra y un viaducto de ladrillo de cuatro arcos al otro lado del valle. Al pie, una aldea con su casa de té. Clima de la pista: niebla | 2,9 km · 53 curvas · 4 horquillas · 177 m de desnivel · referencia 187 s (subida 183 s) |
+
+Los tiempos de referencia salen del rival en Normal con el Coupé: la proporción entre su tiempo en cada pista y en el Monte Kurogane.
+
 ### URP (opcional en la Fase 1)
 
 La escena funciona sin configurar nada. Para usar URP desde ya:
@@ -148,20 +157,22 @@ adb shell am start -n com.bandas6.kuroganetouge/com.unity3d.player.UnityPlayerGa
 adb logcat -s Unity | Select-String KuroganeBench
 ```
 
+Arranca en Inicio y carga la primera pista del catálogo, de bajada. Para otra pista, `-kuroganeBench=Usuba` o el id de la pista escrito en `benchmark.txt` (en `persistentDataPath`). Mientras mide no se guardan récords.
+
 Medido en un Redmi Note 11 (Snapdragon 680, Adreno 610, Vulkan, 2400×1080), con el filtro PS2:
 
-| Escena | fps | GPU por cuadro |
+| Escena | Monte Kurogane | Usuba |
 |---|---|---|
-| Montaña | 59,9 | 13,0 ms |
-| Montaña sin cielo | 59,9 | 12,6 ms (el cielo cuesta 0,4 ms) |
-| Montaña sin filtro PS2 | 59,9 | 12,8 ms |
-| Lluvia | 59,9 | 13,4 ms |
-| Lluvia sin partículas | 59,9 | 12,9 ms (la lluvia cuesta 0,45 ms) |
-| Niebla | 59,9 | 12,6 ms |
-| Tráfico | 59,9 | 13,5 ms |
-| Llegada al pueblo | 59,9 | 13,2 ms |
+| Montaña | 59,9 fps · GPU 13,0 ms | 59,9 fps · GPU 12,9 ms |
+| Montaña sin cielo | 59,9 · 12,6 ms (el cielo cuesta 0,4 ms) | 59,9 · 12,6 ms |
+| Montaña sin filtro PS2 | 59,9 · 12,8 ms | 59,9 · 12,8 ms |
+| Lluvia | 59,9 · 13,4 ms | 59,9 · 13,1 ms |
+| Lluvia sin partículas | 59,9 · 12,9 ms (la lluvia cuesta 0,45 ms) | 59,9 · — |
+| Niebla | 59,9 · 12,6 ms | 59,8 · 13,0 ms |
+| Tráfico | 59,9 · 13,5 ms | 59,9 · 13,9 ms |
+| Llegada al pueblo | 59,9 · 13,2 ms | 58,7 · 13,3 ms |
 
-En ninguna escena hubo cuadros por encima de 16,8 ms.
+En el Monte Kurogane ningún cuadro pasó de 16,8 ms. En Usuba hubo un cuadro suelto de 50 ms en la niebla y otro de 67 ms en la llegada; el p95 sigue en 16,8 ms. (En una escena de Usuba el contador de GPU devolvió un valor inválido.)
 
 ## Estructura
 
@@ -210,6 +221,7 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | ✅ (falta medir en un Android real) |
 | 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | ✅ |
 | E | Varias pistas: escena Inicio, una escena por pista, subida, ambiente por pista y herramienta de pistas (`docs/plan-pistas-modo-libre.md`) | 🧪 en revisión |
+| F | Pistas nuevas: Usuba (hecha); Akane, Myōseki e Irozaka | 🧪 Usuba en revisión |
 
 ## Compilar
 
