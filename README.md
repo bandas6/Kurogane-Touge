@@ -41,7 +41,7 @@ Los materiales generados por código detectan solos si URP está activo.
 | Otra bajada / cambiar coche / menú (al terminar) | Enter / Tab / Esc | A / Select / Start |
 | Moverse por los menús | ↑ ↓ ← → / W A S D, Enter | Cruceta, A |
 
-Al pulsar Play aparece el **menú de coche y opciones**: coche, modo (Batalla o Contrarreloj), dificultad del rival, caja (automática o manual) y unidades de velocidad. Lo elegido se guarda entre sesiones. Los menús también funcionan con el ratón, y en la caja manual los botones ▼ / ▲ de la pantalla cambian de marcha. Para saltarte el menú, desactiva **RaceManager → Show Menu On Start** y se usan los valores del inspector.
+Al pulsar Play aparece el **menú de coche y opciones**: coche, modo (Batalla o Contrarreloj), dificultad del rival, caja (automática o manual), unidades de velocidad, filtro PS2 y volúmenes de sonido y música. Lo elegido se guarda entre sesiones. Los menús también funcionan con el ratón, y en la caja manual los botones ▼ / ▲ de la pantalla cambian de marcha. Para saltarte el menú, desactiva **RaceManager → Show Menu On Start** y se usan los valores del inspector.
 
 ### Nota final
 
@@ -57,6 +57,14 @@ Al llegar a meta la bajada recibe una nota sobre 100:
 
 **S** desde 90, **A** desde 75, **B** desde 60 y **C** por debajo. El tiempo de referencia y el par de drift son provisionales: ajústalos en el inspector cuando tengas tiempos reales.
 
+### Filtro PS2 y sonido
+
+- **Filtro PS2** (componente `PS2Filter` en la cámara): la escena se dibuja a 448 líneas, como la PS2 en NTSC, y se le aplica estela entre cuadros, brillo, tramado Bayer y color de 16 bits (5-6-5). Todo se ajusta en el inspector y se apaga desde el menú. Funciona con URP y con el pipeline integrado.
+- **Motores por código** (`EngineSynth` + `CarAudio` en cada coche): cada coche tiene su tipo de motor (Panda 4 cilindros, Coupé rotativo, Sedán 6 cilindros), con silbido y descarga del turbo, petardeo al soltar el gas, chirrido de ruedas en el derrape y golpes contra el muro. El rival suena según la distancia y el lado.
+- **Música**: el juego no trae pistas. Pon las tuyas (con licencia) en `Assets/Kurogane/Audio/Musica` y vuelve a ejecutar **Kurogane → Crear escena de prueba**.
+
+Si la escena se creó antes de la Fase 4, ejecuta otra vez **Kurogane → Crear escena de prueba** para añadir el filtro, el sonido y la música.
+
 ## Estructura
 
 ```
@@ -69,6 +77,10 @@ Assets/Kurogane/
               RaceManager.Menu (menú, pausa, caja en pantalla, nota final), RaceSettings (opciones guardadas)
     Controls/ DriverInput (teclado y mando; táctil en la Fase 5)
     Core/     MaterialFactory, ProceduralTextures, MeshKit
+    Retro/    PS2Filter (imagen a baja resolución, estela, brillo, tramado, 16 bits)
+    Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer
+  Shaders/    PS2Filter.shader
+  Audio/      Musica/ (pistas propias, ver LEEME.txt)
   Editor/     Menú "Kurogane"
   Data/       Assets de pista y coches (los genera el menú)
   Scenes/     Escenas
@@ -82,9 +94,9 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 |---|---|---|
 | 0 | Proyecto, repositorio, LFS, paquetes | ✅ |
 | 1 | Pista generada, física del coche, cámara, rival, flujo de carrera, HUD provisional | ✅ |
-| 2 | Pulido del juego: menú de coche y opciones, caja manual en pantalla, nota final S–C | 🧪 en prueba |
+| 2 | Pulido del juego: menú de coche y opciones, caja manual en pantalla, nota final S–C | ✅ |
 | 3 | Arte: coches modelados en Blender, texturas a mano, público, señales, lightmaps, mallas horneadas | ⏳ |
-| 4 | Filtro PS2 (estela entre cuadros, brillo, tramado, color de 16 bits) y audio (motor por coche, turbo, eurobeat) | ⏳ |
+| 4 | Filtro PS2 (estela entre cuadros, brillo, tramado, color de 16 bits) y audio (motor por coche, turbo, eurobeat) | 🧪 en prueba (la música la pones tú) |
 | 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | ⏳ |
 | 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | ⏳ |
 | 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | ⏳ |

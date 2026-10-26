@@ -3,6 +3,8 @@ using System.Linq;
 using Kurogane.CameraRig;
 using Kurogane.Cars;
 using Kurogane.Race;
+using Kurogane.Retro;
+using Kurogane.Sound;
 using Kurogane.Track;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -17,6 +19,8 @@ namespace Kurogane.EditorTools
         const string DataDir = "Assets/Kurogane/Data";
         const string SceneDir = "Assets/Kurogane/Scenes";
         const string ScenePath = SceneDir + "/Prototipo.unity";
+        const string ShaderPath = "Assets/Kurogane/Shaders/PS2Filter.shader";
+        const string MusicDir = "Assets/Kurogane/Audio/Musica";
 
         [MenuItem("Kurogane/Crear escena de prueba", priority = 0)]
         public static void CreatePrototypeScene()
@@ -60,11 +64,13 @@ namespace Kurogane.EditorTools
             var player = playerGo.AddComponent<CarController>();
             player.spec = panda;
             playerGo.AddComponent<CarVisual>();
+            playerGo.AddComponent<CarAudio>();
 
             var rivalGo = new GameObject("Rival");
             var rival = rivalGo.AddComponent<RivalAI>();
             rival.spec = coupe;
             rivalGo.AddComponent<CarVisual>();
+            rivalGo.AddComponent<CarAudio>();
 
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
             var cam = camGo.AddComponent<Camera>();
@@ -76,6 +82,11 @@ namespace Kurogane.EditorTools
             camGo.AddComponent<AudioListener>();
             var chase = camGo.AddComponent<ChaseCamera>();
             chase.target = player;
+            var retro = camGo.AddComponent<PS2Filter>();
+            retro.shader = AssetDatabase.LoadAssetAtPath<Shader>(ShaderPath);
+
+            var music = new GameObject("Música").AddComponent<MusicPlayer>();
+            music.tracks = LoadMusic();
 
             var raceGo = new GameObject("Carrera");
             var race = raceGo.AddComponent<RaceManager>();
@@ -84,6 +95,8 @@ namespace Kurogane.EditorTools
             race.rival = rival;
             race.chaseCamera = chase;
             race.cars = new[] { panda, coupe, sedan };
+            race.retro = retro;
+            race.music = music;
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             var scenes = EditorBuildSettings.scenes.ToList();
@@ -101,6 +114,18 @@ namespace Kurogane.EditorTools
         {
             if (!File.Exists(ScenePath)) { CreatePrototypeScene(); return; }
             if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) EditorSceneManager.OpenScene(ScenePath);
+        }
+
+        /// <summary>Pistas de música que haya en Assets/Kurogane/Audio/Musica, por orden de nombre.</summary>
+        static AudioClip[] LoadMusic()
+        {
+            if (!AssetDatabase.IsValidFolder(MusicDir)) return new AudioClip[0];
+            return AssetDatabase.FindAssets("t:AudioClip", new[] { MusicDir })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .OrderBy(p => p)
+                .Select(AssetDatabase.LoadAssetAtPath<AudioClip>)
+                .Where(c => c != null)
+                .ToArray();
         }
 
         static T LoadOrCreate<T>(string path, System.Func<T> create) where T : ScriptableObject

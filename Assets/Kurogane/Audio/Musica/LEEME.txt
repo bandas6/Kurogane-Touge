@@ -1,0 +1,8 @@
+Música de Kurogane Touge
+========================
+
+El juego no trae música. Pon aquí las pistas (eurobeat u otra) en .ogg, .mp3 o .wav y vuelve a
+ejecutar "Kurogane > Crear escena de prueba": se asignan al objeto "Música" por orden de nombre.
+
+Usa solo pistas con licencia para publicar el juego (compuestas para el proyecto o de una librería
+que permita usarlas en juegos comerciales). Los audios se suben con Git LFS (ver .gitattributes).
