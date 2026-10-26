@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Kurogane.Controls;
 using Kurogane.Track;
 using UnityEngine;
@@ -16,6 +17,8 @@ namespace Kurogane.Cars
         public bool manualGearbox;
         [Tooltip("Coche rival para rebufo y contacto (opcional).")]
         public RivalAI rival;
+        /// <summary>Otros coches con los que se puede chocar (tráfico). Los gestiona TrafficManager.</summary>
+        public readonly List<ICarObstacle> Obstacles = new List<ICarObstacle>();
 
         const float SubStep = 1f / 120f;
 
@@ -248,32 +251,42 @@ namespace Kurogane.Cars
                 }
             }
 
-            // Rebufo y contacto con el rival
+            // Rebufo detrás del rival
             Slipstream = false;
             if (rival != null && rival.isActiveAndEnabled && ControlsEnabled)
             {
                 float ds = rival.Distance - Index * Track.Step;
                 float rl = Track.Lane[Mathf.Clamp(rival.Index, 0, Track.N - 1)];
                 if (ds > 3 && ds < 16 && Mathf.Abs(d - rl) < 1.9f && fsp > 18) Slipstream = true;
-                var rp = rival.transform.position;
-                float dx = pos.x - rp.x, dz = pos.z - rp.z, dd = Mathf.Sqrt(dx * dx + dz * dz);
-                if (dd < 2.3f && dd > 0.01f)
-                {
-                    float nx = dx / dd, nz = dz / dd, push = 2.3f - dd;
-                    pos.x += nx * push;
-                    pos.z += nz * push;
-                    var rv = rival.Velocity;
-                    float rel = (vx - rv.x) * nx + (vz - rv.z) * nz;
-                    if (rel < 0)
-                    {
-                        vx -= nx * rel * 1.2f;
-                        vz -= nz * rel * 1.2f;
-                        rival.Bump(rel * 0.3f);
-                        if (rel < -2) RivalContact?.Invoke(-rel);
-                    }
-                }
+            }
+            // Contacto con el rival y con el tráfico: la misma respuesta para todos
+            if (ControlsEnabled)
+            {
+                if (rival != null && rival.isActiveAndEnabled) Collide(rival, ref pos);
+                for (int i = 0; i < Obstacles.Count; i++)
+                    if (Obstacles[i] != null && Obstacles[i].Active) Collide(Obstacles[i], ref pos);
             }
             transform.position = pos;
+        }
+
+        /// <summary>Rebote contra otro coche; RivalContact avisa para quitar agua del vaso y hacer temblar la cámara.</summary>
+        void Collide(ICarObstacle other, ref Vector3 pos)
+        {
+            var rp = other.Position;
+            float dx = pos.x - rp.x, dz = pos.z - rp.z, dd = Mathf.Sqrt(dx * dx + dz * dz);
+            if (dd >= 2.3f || dd <= 0.01f) return;
+            float nx = dx / dd, nz = dz / dd, push = 2.3f - dd;
+            pos.x += nx * push;
+            pos.z += nz * push;
+            var rv = other.Velocity;
+            float rel = (vx - rv.x) * nx + (vz - rv.z) * nz;
+            if (rel < 0)
+            {
+                vx -= nx * rel * 1.2f;
+                vz -= nz * rel * 1.2f;
+                other.Bump(rel * 0.3f);
+                if (rel < -2) RivalContact?.Invoke(-rel);
+            }
         }
 
         float RpmAt(int gear, float forwardSpeed) => Mathf.Clamp(1000 + 7200 * Mathf.Abs(forwardSpeed) / spec.gearTopSpeed[gear], 900, 9000);

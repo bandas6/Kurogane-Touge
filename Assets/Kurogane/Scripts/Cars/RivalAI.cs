@@ -9,8 +9,11 @@ namespace Kurogane.Cars
     /// Rival que sigue la trazada precalculada con el perfil de velocidad de la pista.
     /// Se ajusta un poco a la distancia con el jugador para que la batalla no se rompa.
     /// </summary>
-    public class RivalAI : MonoBehaviour
+    public class RivalAI : MonoBehaviour, ICarObstacle
     {
+        bool ICarObstacle.Active => isActiveAndEnabled;
+        Vector3 ICarObstacle.Position => transform.position;
+
         public CarSpec spec;
         public RivalSkill skill = RivalSkill.Normal;
 

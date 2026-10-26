@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Kurogane.Cars;
 using Kurogane.Core;
 using Kurogane.Track;
 using UnityEngine;
@@ -63,11 +64,13 @@ namespace Kurogane.City
         public void Build()
         {
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            Materials();
 
             Streets();
             RailCrossing();
             TrafficLight();
             Lots();
+            ParkedCars();
             Poles();
             Paddies();
             Cedars();
@@ -299,7 +302,14 @@ namespace Kurogane.City
                 float x = s * (W + 0.9f), z = zr + s * 2.6f;
                 var facing = s < 0 ? Quaternion.LookRotation(-fwd) : Quaternion.LookRotation(fwd); // hacia el tráfico que llega
                 Cylinder(Layer.Detail, W3(x, z, 0), 0.09f, 3.9f, TownCell.Stripes);
-                Box(Layer.Detail, W3(x - s * 0.25f, z, 3.2f), Street, new Vector3(0.12f, 4.2f, 0.12f), TownCell.Stripes);
+                // Barrera móvil: pivota en la base y baja hacia el centro de la calzada
+                var pivot = new GameObject("Barrera").transform;
+                pivot.SetParent(tb.Root, false);
+                pivot.position = W3(x - s * 0.25f, z, 1.1f);
+                var arm = tb.Add("Barrera", LooseBox(new Vector3(0.12f, 4.2f, 0.12f), TownCell.Stripes, new Vector3(0, 2.1f, 0)), town, pivot);
+                tb.Culling.Add(arm.GetComponent<MeshRenderer>(), tb.detailDistance);
+                barrierArms.Add(pivot);
+                barrierDown.Add(Quaternion.FromToRotation(Vector3.up, -s * right));
                 foreach (float ang in new[] { 35f, -35f })
                     Box(Layer.Detail, W3(x, z, 3.55f), facing * Quaternion.Euler(0, 0, ang), new Vector3(1.25f, 0.18f, 0.04f), TownCell.Stripes);
                 for (int k = -1; k <= 1; k += 2)
@@ -329,7 +339,44 @@ namespace Kurogane.City
             crossing.lamps = crossingLamps.ToArray();
             crossing.alternate = true;
             crossing.period = 1.0f;
-            crossing.active = false; // el bloque D lo enciende al bajar la barrera
+            crossing.active = false; // lo enciende CrossingController al cerrar el paso
+            var controller = tb.Root.gameObject.AddComponent<CrossingController>();
+            controller.arms = barrierArms.ToArray();
+            controller.lowered = barrierDown.ToArray();
+            controller.lights = crossing;
+            controller.trackDistance = d.TownStart * d.Step + zr;
+        }
+
+        readonly List<Transform> barrierArms = new List<Transform>();
+        readonly List<Quaternion> barrierDown = new List<Quaternion>();
+
+        // ---------- Coches aparcados (bloque D) ----------
+
+        void ParkedCars()
+        {
+            void Park(TrafficModel model, Vector3 pos, Quaternion rot)
+            {
+                var go = TrafficModels.Build(tb.Root, model, TrafficModels.Paints[rng.Next(TrafficModels.Paints.Length)], out _);
+                go.name = "Aparcado";
+                go.transform.SetPositionAndRotation(pos, rot);
+                foreach (var r in go.GetComponentsInChildren<MeshRenderer>())
+                    if (r.gameObject.name != "Emergencia") tb.Culling.Add(r, tb.detailDistance * 1.3f);
+            }
+            var small = new[] { TrafficModel.Kei, TrafficModel.Taxi, TrafficModel.Furgoneta };
+
+            // Junto a la acera de las calles transversales
+            foreach (float zc in new[] { z1, z2 })
+                for (int s = -1; s <= 1; s += 2)
+                    for (float x = 14; x < 62; x += R(9, 16))
+                        if (Chance(0.55f))
+                            Park(small[rng.Next(small.Length)], W3(s * x, zc + 3.1f, 0.02f), Quaternion.LookRotation(s * right));
+
+            // Dos en el aparcamiento del konbini, de morro hacia la tienda
+            foreach (float dz in new[] { 3.3f, 8.5f })
+                Park(small[rng.Next(small.Length)], W3(W + 5.6f, z2 + 6 + dz, 0.02f), Quaternion.LookRotation(right));
+
+            // Uno repostando en la gasolinera
+            Park(TrafficModel.Furgoneta, W3(W + 7.2f, 14, 0.02f), Quaternion.LookRotation(fwd));
         }
 
         Renderer LampQuad(string name, Vector3 center, Quaternion facing, float size, Material mat)
@@ -692,22 +739,50 @@ namespace Kurogane.City
             tb.Culling.Add(mr, tb.detailDistance);
         }
 
-        void Flush()
+        Material town, water, mid;
+
+        void Materials()
         {
             var atlas = ProceduralTextures.TownAtlas(out var emission);
-            var town = Atlas(MaterialFactory.Lit(Color.white, atlas, 0.15f), emission);
-            var water = Atlas(MaterialFactory.Lit(Color.white, atlas, 0.85f), emission);
+            town = Atlas(MaterialFactory.Lit(Color.white, atlas, 0.15f), emission);
+            water = Atlas(MaterialFactory.Lit(Color.white, atlas, 0.85f), emission);
             var sky = Shader.Find("Kurogane/Sky");
-            Material mid = null;
-            if (sky != null)
-            {
-                mid = new Material(sky) { renderQueue = (int)RenderQueue.Geometry };
-                mid.SetTexture("_MainTex", ProceduralTextures.CityWindows());
-                mid.SetFloat("_SrcBlend", (float)BlendMode.One);
-                mid.SetFloat("_DstBlend", (float)BlendMode.Zero);
-                mid.SetFloat("_ZWrite", 1);
-            }
+            if (sky == null) return;
+            mid = new Material(sky) { renderQueue = (int)RenderQueue.Geometry };
+            mid.SetTexture("_MainTex", ProceduralTextures.CityWindows());
+            mid.SetFloat("_SrcBlend", (float)BlendMode.One);
+            mid.SetFloat("_DstBlend", (float)BlendMode.Zero);
+            mid.SetFloat("_ZWrite", 1);
+        }
 
+        /// <summary>Malla suelta (no combinada) de una caja con una celda del atlas: para piezas que se mueven.</summary>
+        static Mesh LooseBox(Vector3 size, TownCell cell, Vector3 offset)
+        {
+            var uv = ProceduralTextures.TownCell((int)cell);
+            var m = Matrix4x4.TRS(offset, Quaternion.identity, size);
+            var v = new List<Vector3>();
+            var u = new List<Vector2>();
+            var t = new List<int>();
+            foreach (var q in Faces)
+            {
+                int o = v.Count;
+                for (int k = 0; k < 4; k++) v.Add(m.MultiplyPoint3x4(q[k]));
+                u.Add(new Vector2(uv.xMin, uv.yMin)); u.Add(new Vector2(uv.xMax, uv.yMin));
+                u.Add(new Vector2(uv.xMax, uv.yMax)); u.Add(new Vector2(uv.xMin, uv.yMax));
+                t.Add(o); t.Add(o + 3); t.Add(o + 2);
+                t.Add(o); t.Add(o + 2); t.Add(o + 1);
+            }
+            var mesh = new Mesh { name = "Pieza móvil" };
+            mesh.SetVertices(v);
+            mesh.SetUVs(0, u);
+            mesh.SetTriangles(t, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        void Flush()
+        {
             foreach (var kv in meshes)
             {
                 var layer = kv.Key.Item3;

@@ -75,6 +75,15 @@ Si la escena se creó antes de la Fase 4, ejecuta otra vez **Kurogane → Crear 
 
 `SkyDome` (objeto **Cielo**) dibuja el fondo lejano: cúpula con degradado, unas 800 estrellas, luna con halo, dos anillos de cordilleras, unas 1.800 luces de ciudad en el valle (hacia donde baja la carretera) y bruma baja. Va en un grupo que sigue a la cámara, dentro de una esfera menor que su plano lejano, con un shader sin niebla que se dibuja antes que todo lo demás (`Shaders/Sky.shader`). El horizonte usa el color de la niebla, igual que el fondo de la cámara, para que no se note la unión. Se hornea junto con la pista; las escenas antiguas sin cielo reciben uno al arrancar.
 
+### Tráfico
+
+- **Opción Tráfico** del menú: Auto (apagado en Batalla, encendido en Contrarreloj), Sí o No.
+- **Montaña:** coches que suben en sentido contrario por su carril (se circula por la izquierda: para el jugador que baja es la derecha, a +2,6 m), a velocidad baja y frenando en las horquillas. Aparecen a 300-400 m por delante, fuera de la vista, y desaparecen detrás del jugador; como mucho dos a la vez (`TrafficManager`, `TrafficCar`).
+- **Contacto:** el jugador choca con el tráfico igual que con el rival (`ICarObstacle`): rebote, agua del vaso y temblor de cámara. El rival no choca con el tráfico.
+- **Pueblo:** coches aparcados en las transversales, el konbini y la gasolinera; tres coches lentos por la calle mayor que se paran en el paso a nivel. Cada 50 s el paso se cierra 14 s (luces rojas alternas y barreras), salvo mientras el jugador cruza el pueblo en la llegada (`CrossingController`).
+- **Horquillas:** un coche aparcado con los intermitentes de emergencia junto al público.
+- **Modelos** (`TrafficModels`): camioneta kei, furgoneta de reparto, taxi y camión pequeño, una sola malla por coche y materiales compartidos.
+
 ### Clima y hora del día
 
 Opción **Clima** del menú: Despejado, Amanecer, Atardecer, Niebla, Lluvia o Al azar (cambia en cada bajada). Cada perfil (`WeatherProfile`, assets en `Data/Clima` que se pueden retocar) fija niebla, cielo, luz ambiente, luna o sol, faroles, faros, lluvia, asfalto mojado y agarre; `WeatherSystem` lo aplica.
@@ -121,7 +130,8 @@ El único cambio de física es `CarController.GripScale` / `DriftGripScale`, que
 Assets/Kurogane/
   Scripts/
     Track/    TrackDefinition (trazado editable), TrackData (cálculo de la pista y el terreno), TrackBuilder (mallas, señales y público), CrowdFlashes
-    Cars/     CarSpec, CarController (física arcade), RivalAI, CarModelBuilder, CarVisual
+    Cars/     CarSpec, CarController (física arcade), RivalAI, CarModelBuilder, CarVisual,
+              TrafficModels, TrafficCar, TrafficManager, ICarObstacle
     Camera/   ChaseCamera (persecución y cámara de garaje)
     Race/     RaceManager (cuenta atrás, puntos, vaso, sectores, récords),
               RaceManager.Menu (menú, opciones, pausa, nota final), RaceManager.Arrival (llegada al pueblo),

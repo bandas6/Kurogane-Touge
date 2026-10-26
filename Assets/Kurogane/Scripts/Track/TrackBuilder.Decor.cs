@@ -203,6 +203,36 @@ namespace Kurogane.Track
             fx.flashes = renderers.ToArray();
         }
 
+        /// <summary>
+        /// Un coche aparcado con los intermitentes de emergencia en la explanada de cada horquilla, junto al público
+        /// (modelos del tráfico del bloque D).
+        /// </summary>
+        void BuildParkedCars()
+        {
+            var d = Data;
+            var r = new System.Random(seed + 11);
+            int n = 0;
+            foreach (var hp in d.Hairpins)
+            {
+                int outer = -(int)Mathf.Sign(hp.angle), i = (hp.start + hp.end) / 2 + 10;
+                if (i >= d.N || d.Platform(i, outer) < 0.6f) continue;
+                float lat = d.W + 3.4f;
+                var pos = d.At(i, outer, lat, 0);
+                pos.y = d.TerrainY(i, outer, lat);
+                var model = n++ % 2 == 0 ? Kurogane.Cars.TrafficModel.Kei : Kurogane.Cars.TrafficModel.Furgoneta;
+                var paint = Kurogane.Cars.TrafficModels.Paints[r.Next(Kurogane.Cars.TrafficModels.Paints.Length)];
+                var go = Kurogane.Cars.TrafficModels.Build(root, model, paint, out var hazards);
+                go.name = "Aparcado";
+                go.transform.SetPositionAndRotation(pos, Quaternion.Euler(0, d.P[i].heading * Mathf.Rad2Deg + 180, 0));
+                var blink = go.AddComponent<Kurogane.City.Blinker>();
+                blink.lamps = hazards;
+                blink.period = 0.9f;
+                // Los intermitentes los gobierna el Blinker; solo la carrocería se apaga por distancia
+                foreach (var mr in go.GetComponentsInChildren<MeshRenderer>(true))
+                    if (mr.gameObject.name != "Emergencia") culling.Add(mr, detailDistance * 1.3f);
+            }
+        }
+
         /// <summary>Figura de espectador mirando hacia <paramref name="look"/>; devuelve hacia dónde mira.</summary>
         static Vector3 Spectator(Vector3 pos, Vector3 look, System.Random r, List<Matrix4x4>[] jackets, List<Matrix4x4>[] pants,
             List<Matrix4x4> heads)
