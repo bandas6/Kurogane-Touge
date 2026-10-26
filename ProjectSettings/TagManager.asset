@@ -32,11 +32,11 @@ TagManager:
   - 
   - 
   - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Canaleta
+  - Suelo
+  - Obstaculo
+  - CiudadMedia
+  - Cielo
   m_SortingLayers:
   - name: Default
     uniqueID: 0

@@ -20,7 +20,7 @@ namespace Kurogane.Race
     public enum MenuRow
     {
         Pista, Sentido, Coche, Modo, Rival, Caja, Clima, Trafico, Opciones, Empezar,
-        Velocidad, Filtro, Sonido, Musica, Tactil, Resolucion, Pantalla, Vsync, Calidad, Fps, Volver
+        Velocidad, Filtro, Sonido, Musica, Tactil, Resolucion, Pantalla, Vsync, Calidad, Fps, Fisica, Volver
     }
 
     public enum TouchMode { Auto, Si, No }
@@ -42,6 +42,8 @@ namespace Kurogane.Race
         public Vector2Int resolution;
         [Tooltip("Muestra los fps y el tiempo por cuadro en el HUD, para medir el rendimiento.")]
         public bool showFps;
+        [Tooltip("Superficie del coche: la de la pista (carrera, exacta) o la del mundo con colisionadores (bloque G, para probar).")]
+        public bool worldPhysics;
 
         static readonly MenuRow[] RacePage =
         {
@@ -52,11 +54,11 @@ namespace Kurogane.Race
         static readonly MenuRow[] OptionsPageDesktop =
         {
             MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil,
-            MenuRow.Resolucion, MenuRow.Pantalla, MenuRow.Vsync, MenuRow.Calidad, MenuRow.Fps, MenuRow.Volver
+            MenuRow.Resolucion, MenuRow.Pantalla, MenuRow.Vsync, MenuRow.Calidad, MenuRow.Fps, MenuRow.Fisica, MenuRow.Volver
         };
         static readonly MenuRow[] OptionsPageMobile =
         {
-            MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil, MenuRow.Calidad, MenuRow.Fps, MenuRow.Volver
+            MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil, MenuRow.Calidad, MenuRow.Fps, MenuRow.Fisica, MenuRow.Volver
         };
         public const int PauseCount = 3;
         public string PauseLabel(int i) => i == 0 ? "Continuar" : i == 1 ? "Reiniciar " + RunName : "Menú principal";
@@ -98,6 +100,7 @@ namespace Kurogane.Race
             var ps = PlayerSpec;
             if (frontEnd) player.Park(ps, garage != null ? garage.Spot : Vector3.zero, garage != null ? garage.SpotHeading : 0);
             else player.Init(track.Data, ps, track.Data.RaceStart, 0);
+            if (!frontEnd) ApplySurface();
             player.ControlsEnabled = false;
             player.AutoBrake = false;
             player.GetComponent<CarVisual>().Build(ps);
@@ -230,6 +233,7 @@ namespace Kurogane.Race
                     ApplyDisplay(false);
                     break;
                 case MenuRow.Fps: showFps = !showFps; break;
+                case MenuRow.Fisica: worldPhysics = !worldPhysics; ApplySurface(); break;
                 default: return;
             }
             ApplyOptions();
@@ -263,6 +267,7 @@ namespace Kurogane.Race
                 case MenuRow.Vsync: return "VSync";
                 case MenuRow.Trafico: return "Tráfico";
                 case MenuRow.Fps: return "Ver FPS";
+                case MenuRow.Fisica: return "Física";
                 default: return row.ToString();
             }
         }
@@ -296,6 +301,7 @@ namespace Kurogane.Race
                     int q = qualityLevel < 0 ? QualitySettings.GetQualityLevel() : qualityLevel;
                     return q >= 0 && q < names.Length ? names[q] : "—";
                 case MenuRow.Fps: return showFps ? "Sí" : "No";
+                case MenuRow.Fisica: return worldPhysics ? "Mundo (pruebas)" : "Pista";
                 default: return "";
             }
         }

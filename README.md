@@ -39,6 +39,17 @@ Cada pista ajusta también el perfil del rival (aceleración lateral en curva y 
 
 Los tiempos de referencia salen del rival en Normal con el Coupé: la proporción entre su tiempo en cada pista y en el Monte Kurogane.
 
+### Física fuera de la pista
+
+El coche no sabe de dónde salen el suelo y las paredes: se lo dice su superficie (`ICarSurface`). Las fuerzas, el agarre, el derrape y la caja de cambios son los mismos con las dos.
+
+- **Pista** (`TrackSurface`, en carrera): altura de la línea central y límite lateral contra el borde de la calzada, exacto y sin colisionadores.
+- **Mundo** (`WorldSurface`, para el modo libre): la altura sale de un rayo contra la capa **Suelo** y el coche se inclina con la normal; las paredes son colisionadores de la capa **Obstaculo** y el coche, una cápsula vertical, rebota igual que contra el borde de la pista. Los bordes de la carretera son cajas invisibles, una por punto, donde la pista pone su límite; en el pueblo no hay bordes y se choca con las casas. La canaleta son disparadores (capa **Canaleta**) en las horquillas.
+- Los colisionadores se generan y se hornean con la pista (`Colisiones` dentro de la geometría). Hay que volver a hornear las escenas de pista hechas antes.
+- **Opciones → Física** cambia entre las dos para probar (por defecto, Pista).
+
+Comparado en el editor con un piloto automático que roza los bordes: misma bajada del Monte Kurogane con 0,4 s de diferencia sobre 3'37" y 4 mm de diferencia media en el lateral; en Usuba, 0,6 s sobre 4'14" y los mismos golpes. Con los mismos mandos paso a paso las dos trayectorias son idénticas durante 48 s. En el Redmi Note 11 la superficie del mundo cuesta alrededor de 1 ms de CPU (un rayo y una consulta de solapes a 120 Hz) y sigue a 60 fps.
+
 ### URP (opcional en la Fase 1)
 
 La escena funciona sin configurar nada. Para usar URP desde ya:
@@ -108,7 +119,7 @@ Las escenas creadas por el menú ya traen el filtro, el sonido y la música.
 
 ### Clima y hora del día
 
-Opción **Clima** del menú: Despejado, Amanecer, Atardecer, Niebla, Lluvia o Al azar (cambia en cada bajada). Cada perfil (`WeatherProfile`, assets en `Data/Clima` que se pueden retocar) fija niebla, cielo, luz ambiente, luna o sol, faroles, faros, lluvia, asfalto mojado y agarre; `WeatherSystem` lo aplica.
+Opción **Clima** del menú: Despejado, Amanecer, Atardecer, Niebla, Lluvia o Al azar (cambia en cada bajada). Cada perfil (`WeatherProfile`) fija niebla, cielo, luz ambiente, luna o sol, faroles, faros, lluvia, asfalto mojado y agarre; `WeatherSystem` lo aplica. Para retocarlos, crea en `Data/Clima` un asset por clima (**Assets → Create → Kurogane → Weather Profile**, con el nombre del clima, p. ej. `Lluvia`) y vuelve a crear la escena de la pista; si no existen se usan los valores de serie.
 
 | Perfil | Visual | Física |
 |---|---|---|
@@ -124,7 +135,7 @@ El único cambio de física es `CarController.GripScale` / `DriftGripScale`, que
 
 - **La carretera sigue tras la meta** unos 300 m hasta un pueblo (tramos `afterGoal` de `TrackDefinition`; los trazados guardados sin ellos los reciben solos). La meta, los sectores, la pancarta GOAL y la llegada del rival se calculan sobre el tramo cronometrado (`TrackData.FinishIndex` y `TimedLength`), que no cambia: **los récords guardados siguen valiendo**.
 - **Llegada:** al cruzar la meta el coche sigue solo (`CarController.Autopilot`, sin tocar la física) por el carril izquierdo a unos 40 km/h y frena frente a la tienda de tofu, mientras la cámara corta entre tres planos fijos (lateral bajo, picado desde un poste y frontal). Luego salen los resultados. **Confirmar** la salta. El rival sigue despacio y aparca a la derecha.
-- **Pueblo** (`Scripts/City`: `CityBuilder`, `CityStyle`, `CityProps`): calle mayor con aceras, dos transversales, paso a nivel, casas de dos pisos con tejado de kawara, balcones y aire acondicionado, tiendas con persiana y rótulo, konbini iluminado, gasolinera, máquinas expendedoras, cabina, postes eléctricos con cables y farolas, semáforo en ámbar intermitente, arrozales, cedros y la tienda de tofu 豆腐店 黒鉄. Casi todo usa un único material con el atlas del pueblo, se combina por celdas y entra en **Hornear pista** y **Hornear luces**. Los nombres de las tiendas son inventados y se cambian en el asset `Data/PuebloMeta.asset`.
+- **Pueblo** (`Scripts/City`: `CityBuilder`, `CityStyle`, `CityProps`): calle mayor con aceras, dos transversales, paso a nivel, casas de dos pisos con tejado de kawara, balcones y aire acondicionado, tiendas con persiana y rótulo, konbini iluminado, gasolinera, máquinas expendedoras, cabina, postes eléctricos con cables y farolas, semáforo en ámbar intermitente, arrozales, cedros y la tienda de tofu 豆腐店 黒鉄. Casi todo usa un único material con el atlas del pueblo, se combina por celdas y entra en **Hornear pista** y **Hornear luces**. Los nombres de las tiendas son inventados y se cambian en el `CityStyle` del ambiente de cada pista (p. ej. `Data/AldeaUsuba.asset`); el Monte Kurogane usa el de serie, o `Data/PuebloMeta.asset` si lo creas.
 - **Ciudad del valle:** bloques con ventanas encendidas entre 300 m y 1,5 km, sin niebla; la cámara alarga su plano lejano solo al acercarse a la meta. Más lejos, una silueta de ciudad dentro del `SkyDome`.
 
 ### Ambiente y horneado
@@ -181,7 +192,8 @@ Assets/Kurogane/
   Scripts/
     Track/    TrackDefinition (trazado y ficha), EnvironmentTheme (ambiente), TrackCatalog (lista de pistas), TrackData (pista
               y terreno, también de subida), TrackBuilder (mallas, señales y público), TrackPreview (mapa, perfil y avisos), CrowdFlashes
-    Cars/     CarSpec, CarController (física arcade), RivalAI, CarModelBuilder, CarVisual,
+    Cars/     CarSpec, CarController (física arcade), ICarSurface, TrackSurface y WorldSurface (suelo y paredes),
+              RivalAI, CarModelBuilder, CarVisual,
               TrafficModels, TrafficCar, TrafficManager, ICarObstacle
     Camera/   ChaseCamera (persecución y cámara de garaje)
     Race/     RaceManager (cuenta atrás, puntos, vaso, sectores, récords),
@@ -220,8 +232,9 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | ✅ |
 | 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | ✅ (falta medir en un Android real) |
 | 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | ✅ |
-| E | Varias pistas: escena Inicio, una escena por pista, subida, ambiente por pista y herramienta de pistas (`docs/plan-pistas-modo-libre.md`) | 🧪 en revisión |
-| F | Pistas nuevas: Usuba (hecha); Akane, Myōseki e Irozaka | 🧪 Usuba en revisión |
+| E | Varias pistas: escena Inicio, una escena por pista, subida, ambiente por pista y herramienta de pistas (`docs/plan-pistas-modo-libre.md`) | ✅ |
+| F | Pistas nuevas: Usuba (hecha); Akane, Myōseki e Irozaka | 🧪 Usuba hecha |
+| G | Física fuera de la pista: superficie del mundo con colisionadores | 🧪 en revisión |
 
 ## Compilar
 
