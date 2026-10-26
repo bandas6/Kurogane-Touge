@@ -85,6 +85,8 @@ namespace Kurogane.Race
         BestRecord best;
         /// <summary>El benchmark lo apaga: se teletransporta cerca de la meta y dejaría récords falsos.</summary>
         internal bool saveRecords = true;
+        /// <summary>Pueblo y modo libre: la meta no salta al pasar por su punto (lo usa el benchmark del pueblo).</summary>
+        internal bool freeRoam;
         RaceState stateBeforePause;
 
         [System.Serializable]
@@ -293,7 +295,7 @@ namespace Kurogane.Race
                     RaceTime += dt;
                     if (DriverInput.Respawn) { player.Respawn(); chain = 0; multiplier = 1; Show("DE VUELTA EN LA PISTA"); }
                     Scoring(dt);
-                    if (player.Index >= track.Data.FinishIndex) Finish();
+                    if (!freeRoam && player.Index >= track.Data.FinishIndex) Finish();
                     break;
 
                 case RaceState.Finished:

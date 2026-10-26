@@ -159,7 +159,41 @@ namespace Kurogane.EditorTools
             else Debug.Log("Kurogane: horneando luces... el progreso aparece abajo a la derecha del editor.");
         }
 
-        [MenuItem("Kurogane/Quitar horneado", priority = 12)]
+        /// <summary>
+        /// Oclusión horneada (bloque H1): las casas del pueblo tapan lo que hay detrás, así a pie de calle no se dibuja
+        /// medio pueblo. Las casas son oclusores; todo lo demás de la pista, ocluible. Hay que hornear antes la pista.
+        /// </summary>
+        [MenuItem("Kurogane/Hornear oclusión", priority = 12)]
+        public static void BakeOcclusion()
+        {
+            var builder = FindBuilder();
+            if (builder == null) return;
+            var root = builder.transform.Find("Generated");
+            if (!builder.baked || root == null)
+            {
+                Dialog("Primero ejecuta Kurogane > Hornear pista.");
+                return;
+            }
+            int occluders = 0;
+            foreach (var mr in root.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var flags = GameObjectUtility.GetStaticEditorFlags(mr.gameObject) | StaticEditorFlags.OccludeeStatic;
+                if (mr.gameObject.name == Kurogane.City.CityBuilder.BuildingsName) { flags |= StaticEditorFlags.OccluderStatic; occluders++; }
+                GameObjectUtility.SetStaticEditorFlags(mr.gameObject, flags);
+            }
+            if (occluders == 0) { Debug.Log("Kurogane: esta pista no tiene pueblo; no hace falta oclusión."); return; }
+            StaticOcclusionCulling.smallestOccluder = 4;
+            StaticOcclusionCulling.smallestHole = 0.3f;
+            StaticOcclusionCulling.backfaceThreshold = 100;
+            var t0 = System.DateTime.Now;
+            StaticOcclusionCulling.Compute();
+            var scene = builder.gameObject.scene;
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"Kurogane: oclusión horneada con {occluders} grupos de casas como oclusores en {(System.DateTime.Now - t0).TotalSeconds:0} s.");
+        }
+
+        [MenuItem("Kurogane/Quitar horneado", priority = 13)]
         public static void ClearBake()
         {
             var builder = FindBuilder();
@@ -178,6 +212,7 @@ namespace Kurogane.EditorTools
                 EditorUtility.SetDirty(sky);
             }
             Lightmapping.Clear();
+            StaticOcclusionCulling.Clear();
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             Debug.Log("Kurogane: horneado quitado; la pista se vuelve a generar al pulsar Play.");

@@ -138,6 +138,17 @@ El único cambio de física es `CarController.GripScale` / `DriftGripScale`, que
 - **Pueblo** (`Scripts/City`: `CityBuilder`, `CityStyle`, `CityProps`): calle mayor con aceras, dos transversales, paso a nivel, casas de dos pisos con tejado de kawara, balcones y aire acondicionado, tiendas con persiana y rótulo, konbini iluminado, gasolinera, máquinas expendedoras, cabina, postes eléctricos con cables y farolas, semáforo en ámbar intermitente, arrozales, cedros y la tienda de tofu 豆腐店 黒鉄. Casi todo usa un único material con el atlas del pueblo, se combina por celdas y entra en **Hornear pista** y **Hornear luces**. Los nombres de las tiendas son inventados y se cambian en el `CityStyle` del ambiente de cada pista (p. ej. `Data/AldeaUsuba.asset`); el Monte Kurogane usa el de serie, o `Data/PuebloMeta.asset` si lo creas.
 - **Ciudad del valle:** bloques con ventanas encendidas entre 300 m y 1,5 km, sin niebla; la cámara alarga su plano lejano solo al acercarse a la meta. Más lejos, una silueta de ciudad dentro del `SkyDome`.
 
+### Pueblo abierto
+
+Con `CityStyle.extent` mayor que 0 (el Monte Kurogane usa 300) el pueblo es una red de calles transitables de unos 600 × 600 m (`CityBuilder.Open.cs`); con 0 queda el pueblo de una calle (la aldea de Usuba).
+
+- **Calles:** la calle mayor sigue más allá del final de la pista hasta el otro extremo; calles paralelas a 75, 160 y 245 m a cada lado; transversales cada 90-140 m, una de ellas una avenida de cuatro carriles; la vía del tren de punta a punta con la estación (黒鉄駅) y un río con puentes en la calle mayor y en las paralelas de 160 m. Las demás terminan en la orilla, que tiene barandilla.
+- **Lugares** (para el modo libre): tienda de tofu con su garaje, gasolinera, konbini, mirador sobre el río, aparcamiento al pie de la montaña (punto de encuentro con los rivales), estación y salida a la montaña.
+- **Casas** en una o dos filas a lo largo de cada calle, con huertos y solares entre ellas, arrozales en la franja exterior y cedros en el borde. Una rejilla de ocupación evita que se pisen con calles y lugares.
+- **`TownMap`** guarda la red de calles (cruces y tramos, con su ancho y carriles) y los lugares, para el tráfico y el modo libre. Se hornea con la pista.
+- Todo usa el atlas del pueblo, se combina en celdas de 60 m y tiene colisionadores para la física del mundo: con **Opciones → Física → Mundo** se puede salir de la calle mayor y chocar con las casas.
+- **Oclusión horneada:** existe **Kurogane → Hornear oclusión** (casas como oclusores), pero el Monte Kurogane no la lleva. En el Redmi Note 11 casi no ahorraba GPU (13,76 frente a 13,87 ms) y costaba 0,8 ms de CPU y 5,6 MB: las casas son bajas y las calles largas y rectas.
+
 ### Ambiente y horneado
 
 - **Señales** (por código, en pixel art): chevrones en el exterior de cada horquilla, aviso de curva cerrada 70 m antes, límite de 40 en la salida y al salir del túnel, postes kilométricos cada 500 m y rótulo sobre la boca del túnel. Brillan un poco, como el retrorreflectante con los faros.
@@ -185,6 +196,8 @@ Medido en un Redmi Note 11 (Snapdragon 680, Adreno 610, Vulkan, 2400×1080), con
 
 En el Monte Kurogane ningún cuadro pasó de 16,8 ms. En Usuba hubo un cuadro suelto de 50 ms en la niebla y otro de 67 ms en la llegada; el p95 sigue en 16,8 ms. (En una escena de Usuba el contador de GPU devolvió un valor inválido.)
 
+Con el pueblo abierto (bloque H1), en el Monte Kurogane: **pueblo abierto** (la avenida de punta a punta con la física del mundo) 59,0-59,9 fps, GPU 13,8 ms y 10 ms de hilo principal; la memoria pasa de 138 a 149 MB. El resto de escenas sigue igual. Desde H1 el benchmark escribe también el tiempo del hilo principal.
+
 ## Estructura
 
 ```
@@ -205,7 +218,8 @@ Assets/Kurogane/
     Core/     MaterialFactory, ProceduralTextures, MeshKit, DetailCulling
     Environment/ SkyDome (cielo, luna, cordilleras y luces del valle), WeatherProfile, WeatherSystem,
               RainFx, RainAudio, WheelSpray (namespace Kurogane.Atmosphere)
-    City/     CityBuilder (pueblo de la meta y ciudad del valle), CityStyle, Blinker, CrossingController
+    City/     CityBuilder (pueblo de la meta, pueblo abierto y ciudad del valle), CityStyle, TownMap (red de
+              calles y lugares), Blinker, CrossingController
     Retro/    PS2Filter (imagen a baja resolución, estela, brillo, tramado, 16 bits)
     Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer
   Shaders/    PS2Filter.shader, Sky.shader
@@ -234,7 +248,8 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | ✅ |
 | E | Varias pistas: escena Inicio, una escena por pista, subida, ambiente por pista y herramienta de pistas (`docs/plan-pistas-modo-libre.md`) | ✅ |
 | F | Pistas nuevas: Usuba (hecha); Akane, Myōseki e Irozaka | 🧪 Usuba hecha |
-| G | Física fuera de la pista: superficie del mundo con colisionadores | 🧪 en revisión |
+| G | Física fuera de la pista: superficie del mundo con colisionadores | ✅ |
+| H1 | Pueblo abierto: red de calles, río, estación y lugares con función | 🧪 en revisión |
 
 ## Compilar
 

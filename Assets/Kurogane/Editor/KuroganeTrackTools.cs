@@ -118,6 +118,7 @@ namespace Kurogane.EditorTools
                 {
                     if (GUILayout.Button("Abrir escena")) OpenScene();
                     if (GUILayout.Button("Hornear pista")) { if (OpenScene()) KuroganeBake.BakeTrack(); }
+                    if (GUILayout.Button("Hornear oclusión")) { if (OpenScene()) KuroganeBake.BakeOcclusion(); }
                     if (GUILayout.Button("Hornear luces")) { if (OpenScene()) KuroganeBake.BakeLights(); }
                 }
             }
@@ -147,6 +148,7 @@ namespace Kurogane.EditorTools
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             KuroganeSceneSetup.CreateTrackScene(def);
             KuroganeBake.BakeTrack();
+            KuroganeBake.BakeOcclusion();
             KuroganeBake.BakeLights();
         }
 

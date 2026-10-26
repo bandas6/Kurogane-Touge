@@ -105,6 +105,24 @@ namespace Kurogane.Cars
             accX = accZ = 0;
         }
 
+        /// <summary>
+        /// Pone el coche parado en cualquier punto (pueblo abierto, modo libre) sin dejar la pista: el índice pasa a ser
+        /// el del punto de la pista más cercano.
+        /// </summary>
+        public void PlaceAt(Vector3 position, float heading)
+        {
+            int best = 0;
+            float bd = float.MaxValue;
+            for (int i = 0; i < Track.N; i += 2)
+            {
+                float d = (Track.P[i].pos - position).sqrMagnitude;
+                if (d < bd) { bd = d; best = i; }
+            }
+            ResetTo(best, 0);
+            transform.SetPositionAndRotation(position, Quaternion.Euler(0, heading * Mathf.Rad2Deg, 0));
+            Heading = heading;
+        }
+
         /// <summary>Vuelve al centro de la calzada en el punto actual (tecla R).</summary>
         public void Respawn() => ResetTo(Index, 0);
 
