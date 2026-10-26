@@ -145,6 +145,7 @@ namespace Kurogane.Track
             BuildParkedCars();
             var style = theme != null && theme.cityStyle != null ? theme.cityStyle : cityStyle;
             if (d.HasTown) new Kurogane.City.CityBuilder(this, style).Build();
+            BuildColliders();
             ApplyDirection();
         }
 

@@ -82,6 +82,14 @@ namespace Kurogane.EditorTools
                 AssetDatabase.AddObjectToAsset(mesh, container);
                 count[0]++;
             }
+            // Mallas que solo usan colisionadores (bordes de la superficie del mundo)
+            foreach (var mc in root.GetComponentsInChildren<MeshCollider>(true))
+            {
+                var mesh = mc.sharedMesh;
+                if (mesh == null || EditorUtility.IsPersistent(mesh) || !saved.Add(mesh)) continue;
+                AssetDatabase.AddObjectToAsset(mesh, container);
+                count[0]++;
+            }
             foreach (var mr in root.GetComponentsInChildren<MeshRenderer>(true))
             {
                 foreach (var mat in mr.sharedMaterials)

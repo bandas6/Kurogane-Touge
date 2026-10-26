@@ -11,7 +11,7 @@ namespace Kurogane.Race
             Sound = "kurogane.volumenSonido", Music = "kurogane.volumenMusica", Touch = "kurogane.tactil",
             Vsync = "kurogane.vsync", Quality = "kurogane.calidad", ScreenKey = "kurogane.pantalla",
             ResW = "kurogane.resAncho", ResH = "kurogane.resAlto", Fps = "kurogane.verFps", Weather = "kurogane.clima",
-            Traffic = "kurogane.trafico", Track = "kurogane.pista", Direction = "kurogane.sentido";
+            Traffic = "kurogane.trafico", Track = "kurogane.pista", Direction = "kurogane.sentido", World = "kurogane.fisicaMundo";
 
         public static void Load(RaceManager r)
         {
@@ -35,6 +35,7 @@ namespace Kurogane.Race
             r.traffic = Mathf.Clamp(PlayerPrefs.GetInt(Traffic, r.traffic), 0, 2);
             r.trackId = PlayerPrefs.GetString(Track, r.trackId);
             r.direction = (Kurogane.Track.TrackDirection)Mathf.Clamp(PlayerPrefs.GetInt(Direction, (int)r.direction), 0, 1);
+            r.worldPhysics = PlayerPrefs.GetInt(World, r.worldPhysics ? 1 : 0) == 1;
         }
 
         public static void Save(RaceManager r)
@@ -58,6 +59,7 @@ namespace Kurogane.Race
             PlayerPrefs.SetInt(Traffic, r.traffic);
             PlayerPrefs.SetString(Track, r.trackId ?? "");
             PlayerPrefs.SetInt(Direction, (int)r.direction);
+            PlayerPrefs.SetInt(World, r.worldPhysics ? 1 : 0);
             PlayerPrefs.Save();
         }
     }

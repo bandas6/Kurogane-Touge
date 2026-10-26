@@ -76,6 +76,11 @@ namespace Kurogane.Race
                 () => { if (rain != null) rain.intensity = 0; if (race.retro != null) race.retro.rain = 0; }, null);
             yield return Scenario("niebla", 3, 2, 40, null, null);
             yield return Scenario("tráfico", 0, 1, 400, null, null);
+            // Superficie del mundo (bloque G): un rayo y una consulta de solapes por paso de física
+            bool world = race.worldPhysics;
+            yield return Scenario("montaña física del mundo", 0, 2, 40,
+                () => { race.worldPhysics = true; race.ApplySurface(); },
+                () => { race.worldPhysics = world; race.ApplySurface(); });
             yield return Scenario("llegada al pueblo", 0, 2, d.FinishIndex - 60, null, null);
             Debug.Log(Tag + "FIN");
             race.player.Autopilot = null;
@@ -96,6 +101,7 @@ namespace Kurogane.Race
 
             var dt = new List<float>();
             var cpu = new List<float>();
+            var main = new List<float>();
             var gpu = new List<float>();
             float t0 = Time.unscaledTime;
             while (Time.unscaledTime - t0 < Seconds + Warmup)
@@ -107,6 +113,7 @@ namespace Kurogane.Race
                 if (FrameTimingManager.GetLatestTimings(1, timing) > 0)
                 {
                     cpu.Add((float)timing[0].cpuFrameTime);
+                    main.Add((float)timing[0].cpuMainThreadFrameTime);
                     gpu.Add((float)timing[0].gpuFrameTime);
                 }
             }
@@ -117,7 +124,7 @@ namespace Kurogane.Race
             float avg = Average(dt), p95 = dt[Mathf.Min(dt.Count - 1, (int)(dt.Count * 0.95f))], worst = dt[dt.Count - 1];
             long mem = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() / (1024 * 1024);
             Debug.Log(Tag + $"{name}: {1000 / avg:0.0} fps · cuadro {avg:0.0} ms (p95 {p95:0.0}, peor {worst:0.0}) · " +
-                      $"CPU {Average(cpu):0.00} ms · GPU {Average(gpu):0.00} ms · {dt.Count} cuadros · memoria {mem} MB");
+                      $"CPU {Average(cpu):0.00} ms (hilo principal {Average(main):0.00} ms) · GPU {Average(gpu):0.00} ms · {dt.Count} cuadros · memoria {mem} MB");
         }
 
         static float Average(List<float> v)

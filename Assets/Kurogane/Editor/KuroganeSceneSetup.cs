@@ -128,7 +128,8 @@ namespace Kurogane.EditorTools
             Directory.CreateDirectory(DataDir);
             Directory.CreateDirectory(SceneDir);
             var cars = Cars();
-            var cityStyle = LoadOrCreate(DataDir + "/PuebloMeta.asset", () => ScriptableObject.CreateInstance<Kurogane.City.CityStyle>());
+            // Estilo del pueblo: el del tema de la pista o, si no hay, Data/PuebloMeta si existe (si no, el de serie)
+            var cityStyle = AssetDatabase.LoadAssetAtPath<Kurogane.City.CityStyle>(DataDir + "/PuebloMeta.asset");
             AssetDatabase.SaveAssets();
 
             // Abrir una escena nueva descarga los assets que nadie usa: la pista se vuelve a cargar desde su ruta
@@ -179,12 +180,11 @@ namespace Kurogane.EditorTools
             race.retro = retro;
             race.music = music;
 
-            // Perfiles de clima editables en Data/Clima (se crean con los valores de serie)
-            Directory.CreateDirectory(DataDir + "/Clima");
+            // Perfiles de clima: los de Data/Clima si existen (para editarlos, créalos con
+            // Assets > Create > Kurogane > Weather Profile); los que falten usan los valores de serie al arrancar
             var weather = raceGo.AddComponent<WeatherSystem>();
             weather.profiles = System.Enum.GetValues(typeof(WeatherKind)).Cast<WeatherKind>()
-                .Select(k => LoadOrCreate($"{DataDir}/Clima/{k}.asset", () => WeatherProfile.Preset(k))).ToArray();
-            AssetDatabase.SaveAssets();
+                .Select(k => AssetDatabase.LoadAssetAtPath<WeatherProfile>($"{DataDir}/Clima/{k}.asset")).ToArray();
 
             string path = ScenePath(def);
             EditorSceneManager.SaveScene(scene, path);

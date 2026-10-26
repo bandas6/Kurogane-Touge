@@ -8,7 +8,8 @@ namespace Kurogane.Cars
 {
     /// <summary>
     /// Física arcade del coche, portada tal cual del prototipo web. No usa WheelCollider ni Rigidbody:
-    /// integra posición y velocidad a 120 Hz y resuelve los límites de la calzada contra la línea central.
+    /// integra posición y velocidad a 120 Hz. El suelo y los bordes los pone la superficie activa (ICarSurface): la
+    /// de la pista, contra la línea central, o la del mundo, contra colisionadores.
     /// Convención: rumbo 0 = +Z, positivo = giro a la derecha; lateral positivo = derecha.
     /// </summary>
     public class CarController : MonoBehaviour
@@ -123,7 +124,29 @@ namespace Kurogane.Cars
                 Step(SubStep);
                 accumulator -= SubStep;
             }
-            transform.SetPositionAndRotation(transform.position, Quaternion.Euler(0, Heading * Mathf.Rad2Deg, 0));
+            var yawRot = Quaternion.Euler(0, Heading * Mathf.Rad2Deg, 0);
+            if (surface == TrackSurface.Instance) transform.SetPositionAndRotation(transform.position, yawRot);
+            else
+            {
+                // Con la superficie del mundo el coche se inclina con el suelo (suavizado para que no tiemble)
+                tilt = Vector3.Slerp(tilt, surface.Normal, Mathf.Min(1, Time.deltaTime * 10));
+                transform.SetPositionAndRotation(transform.position, Quaternion.FromToRotation(Vector3.up, tilt) * yawRot);
+            }
+        }
+
+        /// <summary>Superficie activa: la de la pista (por defecto, en carrera) o la del mundo con colisionadores.</summary>
+        public ICarSurface Surface => surface;
+        ICarSurface surface = TrackSurface.Instance;
+        Vector3 tilt = Vector3.up;
+
+        /// <summary>Cambia entre la superficie de la pista y la del mundo (bloque G). El manejo es el mismo.</summary>
+        /// <param name="borderIndex">Punto de la pista de cada caja de borde (TrackBuilder.BorderIndex), o null.</param>
+        public void UseWorldSurface(bool on, Func<Collider, int> borderIndex = null)
+        {
+            if (on == !(surface is TrackSurface)) return;
+            if (surface is WorldSurface w) w.Dispose();
+            surface = on ? new WorldSurface(this, borderIndex) : (ICarSurface)TrackSurface.Instance;
+            tilt = Vector3.up;
         }
 
         void Step(float dt)
@@ -197,9 +220,7 @@ namespace Kurogane.Cars
 
             // Canaleta: las ruedas interiores enganchadas en el desagüe de la horquilla
             var pos = transform.position;
-            float dlat = Track.Lateral(Index, pos);
-            int gs = Track.GutterSide[Index];
-            bool inGut = ControlsEnabled && gs != 0 && dlat * gs > Track.HW[Index] - 1.75f && fsp > 7;
+            bool inGut = ControlsEnabled && fsp > 7 && surface.OverGutter(this, pos);
 
             // Giro
             float yaw = Steer * spec.yawRate * Mathf.Min(1, fsp / 6) / (1 + fsp / 30);
@@ -241,31 +262,12 @@ namespace Kurogane.Cars
             LateralAccel = accX * nrx + accZ * nrz;
             LongitudinalAccel = accX * nfx + accZ * nfz;
 
-            // Límites de la calzada (por el lado de la canaleta las ruedas pueden bajar al desagüe)
+            // Suelo y bordes: los pone la superficie activa (la de la pista en carrera, la del mundo con colisionadores)
             Index = Track.Nearest(pos, Index);
-            var p = Track.P[Index];
-            float d = Track.Lateral(Index, pos);
-            int sd = d >= 0 ? 1 : -1;
-            float lim = Track.GutterSide[Index] == sd ? Track.HW[Index] - 0.6f : Track.HW[Index] - 0.95f;
-            float along = (pos.x - p.pos.x) * p.forward.x + (pos.z - p.pos.z) * p.forward.z;
-            var next = Track.P[Mathf.Min(Track.N - 1, Index + 1)];
-            pos.y = Mathf.Lerp(p.pos.y, next.pos.y, Mathf.Clamp01(along / Track.Step)) - (inGut ? 0.06f : 0);
+            float d = Track.Lateral(Index, pos); // para el rebufo, antes de separar del borde
             InGutter = inGut;
-            if (Mathf.Abs(d) > lim)
-            {
-                float over = Mathf.Abs(d) - lim;
-                pos.x -= p.right.x * over * sd;
-                pos.z -= p.right.z * over * sd;
-                float vn = (vx * p.right.x + vz * p.right.z) * sd;
-                if (vn > 0)
-                {
-                    vx -= p.right.x * sd * vn * 1.3f;
-                    vz -= p.right.z * sd * vn * 1.3f;
-                    vx *= 0.985f;
-                    vz *= 0.985f;
-                    if (vn > 2.2f && ControlsEnabled) WallHit?.Invoke(vn, pos + p.right * sd * 0.9f);
-                }
-            }
+            surface.Constrain(this, ref pos, ref vx, ref vz, inGut, out float impact, out var hitPoint);
+            if (impact > 2.2f && ControlsEnabled) WallHit?.Invoke(impact, hitPoint);
 
             // Rebufo detrás del rival
             Slipstream = false;

@@ -183,6 +183,12 @@ namespace Kurogane.Race
             else StartRace();
         }
 
+        /// <summary>Superficie del coche elegida en Opciones > Física (en la escena Inicio no hay pista).</summary>
+        internal void ApplySurface()
+        {
+            if (!frontEnd && player != null) player.UseWorldSurface(worldPhysics, track.BorderIndex);
+        }
+
         /// <summary>Pone la pista en el sentido elegido (subida solo si la pista lo permite).</summary>
         void ApplyDirection()
         {
@@ -199,6 +205,7 @@ namespace Kurogane.Race
             var data = track.Data;
             var ps = PlayerSpec;
             player.Init(data, ps, data.RaceStart, -2.2f);
+            ApplySurface();
             player.manualGearbox = manualGearbox;
             player.ControlsEnabled = false;
             player.AutoBrake = false;
