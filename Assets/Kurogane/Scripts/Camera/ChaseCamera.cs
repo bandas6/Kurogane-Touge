@@ -73,8 +73,8 @@ namespace Kurogane.CameraRig
             if (layerCull == null) layerCull = new float[32];
             for (int i = 0; i < 32; i++)
                 layerCull[i] = i == Kurogane.City.CityBuilder.MidCityLayer || i == Kurogane.Atmosphere.SkyDome.SkyLayer ? 0 : fogFar;
+            // Distancias planas: layerCullSpherical solo existe en el pipeline integrado (con URP escribe un aviso por cuadro)
             cam.layerCullDistances = layerCull;
-            cam.layerCullSpherical = true;
             if (cinematic)
             {
                 camPos = shotPosition;
