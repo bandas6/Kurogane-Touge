@@ -25,10 +25,12 @@ namespace Kurogane.Race
 
         public static bool Requested()
         {
+            bool arg = false;
             foreach (var a in Environment.GetCommandLineArgs())
-                if (a == "-kuroganeBench") return true;
+                if (a == "-kuroganeBench") arg = true;
+            // El archivo se borra siempre, también si llegó el argumento: si no, el siguiente arranque normal volvía a medir
             var file = Path.Combine(Application.persistentDataPath, "benchmark.txt");
-            if (!File.Exists(file)) return false;
+            if (!File.Exists(file)) return arg;
             try { File.Delete(file); } catch (Exception) { }
             return true;
         }
@@ -36,6 +38,7 @@ namespace Kurogane.Race
         IEnumerator Start()
         {
             race = GetComponent<RaceManager>();
+            race.saveRecords = false;
             yield return null;
             Debug.Log(Tag + $"INICIO {SystemInfo.deviceModel} · {SystemInfo.graphicsDeviceName} · {SystemInfo.graphicsDeviceType} · " +
                       $"{Screen.width}x{Screen.height} · calidad {QualitySettings.names[QualitySettings.GetQualityLevel()]} · " +
