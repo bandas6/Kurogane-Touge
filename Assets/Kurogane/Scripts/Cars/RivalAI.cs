@@ -29,6 +29,8 @@ namespace Kurogane.Cars
         public Vector3 Velocity => new Vector3(Mathf.Sin(Heading), 0, Mathf.Cos(Heading)) * Speed;
         /// <summary>Lo usa el RaceManager para fijar el tiempo de llegada.</summary>
         public System.Func<float> Clock { get; set; }
+        /// <summary>Agarre del clima: la velocidad en curva se escala por su raíz, para que en mojado no vaya imposible.</summary>
+        public float GripScale { get; set; } = 1;
 
         static float SkillFactor(RivalSkill s) => s == RivalSkill.Facil ? 0.83f : s == RivalSkill.Normal ? 0.92f : 1.0f;
 
@@ -69,7 +71,7 @@ namespace Kurogane.Cars
                 float target = Finished
                     ? (Distance < Track.TimedLength + 100 ? Mathf.Min(9, Track.VMax[Mathf.Min(Track.N - 1, i + 3)]) : 0)
                     : Mathf.Min(spec.gearTopSpeed[spec.Gears - 1] * 0.97f,
-                        Track.VMax[Mathf.Min(Track.N - 1, i + 3)] * sk * (spec.grip > 9 ? 1.03f : 1));
+                        Track.VMax[Mathf.Min(Track.N - 1, i + 3)] * sk * (spec.grip > 9 ? 1.03f : 1) * Mathf.Sqrt(GripScale));
                 float accUp = (Speed < 12 ? 6 : 4.2f) * spec.gearAccel[0] / 10f;
                 Braking = target < Speed - 0.5f;
                 Speed += Mathf.Clamp(target - Speed, -10 * dt, accUp * dt);

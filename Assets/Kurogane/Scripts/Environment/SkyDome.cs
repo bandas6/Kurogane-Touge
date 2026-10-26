@@ -73,13 +73,60 @@ namespace Kurogane.Atmosphere
             white.Apply();
             var soft = ProceduralTextures.SoftDot();
 
-            Add("Cúpula", Dome(), Material(white, false, 1000));
+            var dome = Material(white, false, 1000);
+            dome.SetFloat("_Gradient", 1);
+            Add(DomeName, Dome(), dome);
             Add("Cordillera lejana", Ridge(0.97f, 9, 0.35f, valley, Color.Lerp(horizon, new Color(0.04f, 0.045f, 0.08f), 0.55f)), Material(white, false, 1001));
             Add("Ciudad lejana", Skyline(valley), Material(white, false, 1002));
             Add("Cordillera cercana", Ridge(0.93f, 6, 0.6f, valley, new Color(0.018f, 0.022f, 0.04f)), Material(white, false, 1003));
-            Add("Estrellas y valle", Points(valley), Material(white, true, 1004));
-            Add("Bruma", Mist(valley), Material(soft, true, 1005));
+            Add(StarsName, Points(valley, out var valleyMesh), Material(white, true, 1004));
+            Add(ValleyName, valleyMesh, Material(white, true, 1004));
+            Add(MistName, Mist(valley), Material(soft, true, 1005));
             BuildMoon(soft);
+            SetWeather(horizon, zenith, ground, Color.clear, 1, 1, 1, 0);
+        }
+
+        const string DomeName = "Cúpula", StarsName = "Estrellas", ValleyName = "Luces del valle", MistName = "Bruma";
+        static readonly int HorizonId = Shader.PropertyToID("_Horizon"), ZenithId = Shader.PropertyToID("_Zenith"),
+            GroundId = Shader.PropertyToID("_Ground"), BandId = Shader.PropertyToID("_Band"), TintId = Shader.PropertyToID("_Tint"),
+            FogMixId = Shader.PropertyToID("_FogMix"), GradientId = Shader.PropertyToID("_Gradient");
+        MaterialPropertyBlock block;
+
+        /// <summary>
+        /// Colores del cielo según el clima (WeatherSystem): degradado de la cúpula, franja cálida del horizonte,
+        /// brillo de estrellas, luces del valle y luna, y cuánto se funden las cordilleras con la niebla.
+        /// Usa MaterialPropertyBlock: no toca los materiales, que pueden estar horneados.
+        /// </summary>
+        public void SetWeather(Color horizonColor, Color zenithColor, Color groundColor, Color band, float stars, float city,
+            float moon, float ridgeHaze)
+        {
+            if (root == null) return;
+            horizon = horizonColor;
+            zenith = zenithColor;
+            ground = groundColor;
+            if (block == null) block = new MaterialPropertyBlock();
+            foreach (var mr in root.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                block.Clear();
+                // Los colores de la cúpula se dan igual que los de vértice (sin conversión a lineal)
+                block.SetColor(HorizonId, horizonColor.gamma);
+                block.SetColor(ZenithId, zenithColor.gamma);
+                block.SetColor(GroundId, groundColor.gamma);
+                block.SetColor(BandId, band.gamma);
+                float tint = 1, mix = 0;
+                switch (mr.gameObject.name)
+                {
+                    case DomeName: block.SetFloat(GradientId, 1); break;
+                    case StarsName: tint = stars; break;
+                    case ValleyName: tint = city; break;
+                    case "Halo": case "Luna": tint = moon; break;
+                    case MistName: tint = 1 + ridgeHaze * 2; break;
+                    default: mix = ridgeHaze; break; // cordilleras y ciudad lejana
+                }
+                block.SetColor(TintId, new Color(tint, tint, tint, 1).gamma); // multiplicador tal cual, sin pasar a lineal
+                block.SetFloat(FogMixId, mix);
+                mr.SetPropertyBlock(block);
+            }
         }
 
         void LateUpdate()
@@ -197,8 +244,11 @@ namespace Kurogane.Atmosphere
             return Finish(v, c, null, t);
         }
 
-        /// <summary>Estrellas en el cielo y luces de ciudad bajo el horizonte hacia el valle, como quads mirando al centro.</summary>
-        Mesh Points(float valley)
+        /// <summary>
+        /// Estrellas en el cielo y, en <paramref name="valleyMesh"/>, luces de ciudad bajo el horizonte hacia el valle,
+        /// como quads mirando al centro. Van en mallas separadas para que el clima las regule por separado.
+        /// </summary>
+        Mesh Points(float valley, out Mesh valleyMesh)
         {
             var v = new List<Vector3>();
             var c = new List<Color>();
@@ -215,6 +265,12 @@ namespace Kurogane.Atmosphere
                 var tint = rng.Next(6) == 0 ? new Color(1f, 0.85f, 0.7f) : rng.Next(5) == 0 ? new Color(0.75f, 0.85f, 1f) : Color.white;
                 Quad(v, c, uv, t, Dir(az, elev) * r, Mathf.Lerp(0.35f, 0.75f, b), tint * b * Mathf.Clamp01(elev / 18));
             }
+
+            var starMesh = Finish(v, c, uv, t);
+            v = new List<Vector3>();
+            c = new List<Color>();
+            uv = new List<Vector2>();
+            t = new List<int>();
 
             // Pueblos del valle: grupos de luces cálidas, alguna fría, más densos y cercanos al centro del valle
             int clusters = Mathf.Max(1, valleyLights / 70);
@@ -242,7 +298,8 @@ namespace Kurogane.Atmosphere
                     for (float el = -1.7f; el < b.z - 0.1f; el += 0.28f)
                         if (rng.Next(3) == 0)
                             Quad(v, c, uv, t, Dir(az, el) * radius * 0.945f, 0.28f, new Color(1f, 0.8f, 0.5f) * Mathf.Lerp(0.3f, 0.8f, (float)rng.NextDouble()));
-            return Finish(v, c, uv, t);
+            valleyMesh = Finish(v, c, uv, t);
+            return starMesh;
         }
 
         /// <summary>Bancos de bruma baja sobre el valle, aditivos y muy tenues.</summary>

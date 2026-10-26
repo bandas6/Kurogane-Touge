@@ -75,6 +75,20 @@ Si la escena se creó antes de la Fase 4, ejecuta otra vez **Kurogane → Crear 
 
 `SkyDome` (objeto **Cielo**) dibuja el fondo lejano: cúpula con degradado, unas 800 estrellas, luna con halo, dos anillos de cordilleras, unas 1.800 luces de ciudad en el valle (hacia donde baja la carretera) y bruma baja. Va en un grupo que sigue a la cámara, dentro de una esfera menor que su plano lejano, con un shader sin niebla que se dibuja antes que todo lo demás (`Shaders/Sky.shader`). El horizonte usa el color de la niebla, igual que el fondo de la cámara, para que no se note la unión. Se hornea junto con la pista; las escenas antiguas sin cielo reciben uno al arrancar.
 
+### Clima y hora del día
+
+Opción **Clima** del menú: Despejado, Amanecer, Atardecer, Niebla, Lluvia o Al azar (cambia en cada bajada). Cada perfil (`WeatherProfile`, assets en `Data/Clima` que se pueden retocar) fija niebla, cielo, luz ambiente, luna o sol, faroles, faros, lluvia, asfalto mojado y agarre; `WeatherSystem` lo aplica.
+
+| Perfil | Visual | Física |
+|---|---|---|
+| Despejado | Medianoche con el cielo estrellado | Normal |
+| Amanecer | Niebla lila, horizonte naranja, faroles al 35 % | Normal |
+| Atardecer | Paleta cálida, sol bajo | Normal |
+| Niebla | Niebla densa (fin a 90 m), conos de luz de los faros | Normal |
+| Lluvia | Lluvia alrededor de la cámara, gotas en pantalla (con el filtro PS2), asfalto mojado con charcos, salpicaduras, limpiaparabrisas en la vista de capó, sonido de lluvia y relámpagos | Agarre ×0,8, derrape ×0,85 |
+
+El único cambio de física es `CarController.GripScale` / `DriftGripScale`, que fija el clima; el rival escala su velocidad en curva por la raíz del agarre. Los reflejos del asfalto mojado salen de sondas de reflexión que se crean con **Hornear luces**. Los colores y el mojado se aplican con `MaterialPropertyBlock`, así que no modifican los materiales horneados.
+
 ### Pueblo de la meta y llegada
 
 - **La carretera sigue tras la meta** unos 300 m hasta un pueblo (tramos `afterGoal` de `TrackDefinition`; los trazados guardados sin ellos los reciben solos). La meta, los sectores, la pancarta GOAL y la llegada del rival se calculan sobre el tramo cronometrado (`TrackData.FinishIndex` y `TimedLength`), que no cambia: **los récords guardados siguen valiendo**.
@@ -115,7 +129,8 @@ Assets/Kurogane/
     Hud/      HudView (HUD y caja de cambios), MenuView (menús, pausa, resultados), TouchControls, UiKit
     Controls/ DriverInput (teclado, mando y táctil)
     Core/     MaterialFactory, ProceduralTextures, MeshKit, DetailCulling
-    Environment/ SkyDome (cielo, luna, cordilleras y luces del valle; namespace Kurogane.Atmosphere)
+    Environment/ SkyDome (cielo, luna, cordilleras y luces del valle), WeatherProfile, WeatherSystem,
+              RainFx, RainAudio, WheelSpray (namespace Kurogane.Atmosphere)
     City/     CityBuilder (pueblo de la meta y ciudad del valle), CityStyle, CityProps (atlas y Blinker)
     Retro/    PS2Filter (imagen a baja resolución, estela, brillo, tramado, 16 bits)
     Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer

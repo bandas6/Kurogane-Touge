@@ -47,6 +47,12 @@ namespace Kurogane.Race
         [Range(0, 10)] public int soundVolume = 8;
         [Range(0, 10)] public int musicVolume = 6;
 
+        [Header("Clima")]
+        [Tooltip("0 Despejado, 1 Amanecer, 2 Atardecer, 3 Niebla, 4 Lluvia, 5 Al azar (cambia en cada bajada).")]
+        [Range(0, 5)] public int weather;
+        WeatherSystem weatherSystem;
+        WeatherKind randomWeather;
+
         [Header("Nota final")]
         [Tooltip("Tiempo de referencia (s): bajar en este tiempo da 30 de los 40 puntos de tiempo; cada segundo menos suma 1.")]
         public float parTime = 120;
@@ -96,8 +102,24 @@ namespace Kurogane.Race
             track.Build();
             // Escenas creadas antes del cielo (bloque A) no lo traen: se añade uno al arrancar
             if (FindAnyObjectByType<SkyDome>() == null) new GameObject("Cielo").AddComponent<SkyDome>();
+            Ensure<WeatherSystem>();
+            weatherSystem = GetComponent<WeatherSystem>();
+            weatherSystem.Init(track, chaseCamera, retro, player, rival);
+            ApplyWeather(true);
             player.WallHit += OnWallHit;
             player.RivalContact += v => { Water = Mathf.Max(0, Water - v * 0.8f); chaseCamera.Shake(0.4f); };
+        }
+
+        /// <summary>Aplica el clima elegido; con "Al azar", <paramref name="reroll"/> sortea uno nuevo.</summary>
+        void ApplyWeather(bool reroll)
+        {
+            if (weatherSystem == null) return;
+            if (weather >= 5)
+            {
+                if (reroll) randomWeather = (WeatherKind)Random.Range(0, 5);
+                weatherSystem.Apply(randomWeather);
+            }
+            else weatherSystem.Apply((WeatherKind)Mathf.Clamp(weather, 0, 4));
         }
 
         void Ensure<T>() where T : Component
@@ -136,6 +158,7 @@ namespace Kurogane.Race
             }
 
             ResetArrival();
+            ApplyWeather(true);
             chaseCamera.target = player;
             chaseCamera.showroom = false;
             chaseCamera.Snap();

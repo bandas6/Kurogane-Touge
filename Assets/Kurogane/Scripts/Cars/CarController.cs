@@ -28,6 +28,10 @@ namespace Kurogane.Cars
         /// Necesita ControlsEnabled para que la caja automática siga cambiando.
         /// </summary>
         public Func<(float gas, float brake, float steer)> Autopilot { get; set; }
+        /// <summary>Multiplica spec.grip (clima: 0,8 con lluvia). Es el único cambio de física del bloque C.</summary>
+        public float GripScale { get; set; } = 1;
+        /// <summary>Multiplica spec.driftGrip (clima: 0,85 con lluvia).</summary>
+        public float DriftGripScale { get; set; } = 1;
         public float Heading { get; private set; }
         public Vector3 Velocity => new Vector3(vx, 0, vz);
         public float Speed => Mathf.Sqrt(vx * vx + vz * vz);
@@ -186,7 +190,7 @@ namespace Kurogane.Cars
             yaw += Slip * (Drifting ? 0.55f : 2.2f);
             Heading = h + yaw * dt;
 
-            float grip = Drifting ? (hand ? 0.9f : spec.driftGrip + (gas > 0 ? 0 : 1.2f)) : spec.grip;
+            float grip = Drifting ? (hand ? 0.9f : spec.driftGrip * DriftGripScale + (gas > 0 ? 0 : 1.2f)) : spec.grip * GripScale;
             if (spec.allWheelDrive && Drifting && gas > 0) grip += 0.8f;
             if (inGut) grip = Mathf.Max(grip, 14);
             vL *= Mathf.Exp(-grip * dt);

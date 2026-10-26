@@ -33,6 +33,14 @@ namespace Kurogane.Core
             public void Fill(Color32 c) => Rect(0, 0, w, h, c);
 
             public void Set(int x, int y, Color32 c) { if (x >= 0 && x < w && y >= 0 && y < h) px[(h - 1 - y) * w + x] = c; }
+
+            /// <summary>Cambia solo el canal alfa (máscaras, como los charcos del asfalto).</summary>
+            public void Alpha(int x, int y, byte a)
+            {
+                if (x < 0 || x >= w || y < 0 || y >= h) return;
+                int k = (h - 1 - y) * w + x;
+                px[k].a = a;
+            }
             public Color32 Get(int x, int y) => px[(h - 1 - y) * w + x];
 
             public void Blend(int x, int y, int rw, int rh, Color32 c, float a)
@@ -92,6 +100,17 @@ namespace Kurogane.Core
             // rodadas
             g.Blend(14, 0, 6, 128, H("#000000"), 0.18f);
             g.Blend(44, 0, 6, 128, H("#000000"), 0.18f);
+            // Alfa = máscara de brillo: el material toma el smoothness de aquí. Charcos en las rodadas y los bordes,
+            // que solo se notan con el asfalto mojado (WeatherSystem sube el smoothness)
+            for (int y = 0; y < 128; y++)
+                for (int x = 0; x < 64; x++) g.Alpha(x, y, 115);
+            for (int i = 0; i < 9; i++)
+            {
+                int cx = rng.Next(2) == 0 ? R(12, 22) : R(42, 52), cy = R(0, 128), rx = R(3, 7), ry = R(6, 14);
+                for (int y = -ry; y <= ry; y++)
+                    for (int x = -rx; x <= rx; x++)
+                        if (x * x * ry * ry + y * y * rx * rx <= rx * rx * ry * ry) g.Alpha(cx + x, (cy + y + 128) % 128, 255);
+            }
             return g.ToTexture("Asphalt");
         }
 
@@ -384,6 +403,43 @@ namespace Kurogane.Core
                     g.Rect(x, y, 2, 2, c);
                 }
             return g.ToTexture("VentanasCiudad");
+        }
+
+        // ---------- Lluvia (bloque C) ----------
+
+        /// <summary>
+        /// Mapa de gotas para el filtro PS2: RG = hacia dónde desvía cada gota la imagen (0,5 = nada), A = dónde hay
+        /// gota. Gotas redondas con un reguero hacia arriba (se deslizan hacia abajo). Se repite y es bilineal.
+        /// </summary>
+        public static Texture2D RainDrops()
+        {
+            const int n = 128;
+            var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Gotas", wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Bilinear };
+            var px = new Color32[n * n];
+            for (int k = 0; k < px.Length; k++) px[k] = new Color32(128, 128, 128, 0);
+            var r = new System.Random(5);
+            for (int i = 0; i < 46; i++)
+            {
+                int cx = r.Next(n), cy = r.Next(n), rad = r.Next(2, 7);
+                for (int y = -rad; y <= rad; y++)
+                    for (int x = -rad; x <= rad; x++)
+                    {
+                        float d = Mathf.Sqrt(x * x + y * y) / rad;
+                        if (d > 1) continue;
+                        int k = ((cy + y + n) % n) * n + (cx + x + n) % n;
+                        px[k] = new Color32((byte)(128 + x * 127 / rad), (byte)(128 + y * 127 / rad), 128, (byte)(255 * (1 - d * d)));
+                    }
+                // reguero por encima de la gota
+                int trail = r.Next(0, rad * 4);
+                for (int y = 1; y <= trail; y++)
+                {
+                    int k = ((cy + rad + y) % n) * n + cx % n;
+                    px[k] = new Color32(128, 150, 128, (byte)(110 * (1 - y / (float)(trail + 1))));
+                }
+            }
+            t.SetPixels32(px);
+            t.Apply(false);
+            return t;
         }
 
         // ---------- Señales (Fase 3) ----------

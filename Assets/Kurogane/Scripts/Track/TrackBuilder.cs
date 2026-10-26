@@ -74,7 +74,7 @@ namespace Kurogane.Track
             float W = d.W;
 
             // Calzada
-            var road = MaterialFactory.Lit(Color.white, ProceduralTextures.Asphalt(), 0.15f);
+            var road = MaterialFactory.Lit(Color.white, ProceduralTextures.Asphalt(), 0.3f).SmoothnessFromAlpha();
             AddRibbon("Road", d.N, i =>
             {
                 var p = d.P[i];

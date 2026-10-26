@@ -1,4 +1,5 @@
-// Filtro PS2 de Kurogane Touge: estela entre cuadros, brillo, tramado ordenado y color de 16 bits.
+// Filtro PS2 de Kurogane Touge: estela entre cuadros, brillo, tramado ordenado y color de 16 bits,
+// más gotas de lluvia en pantalla (_Rain) en el mismo pase final.
 // Lo usa PS2Filter.cs con Graphics.Blit, así que funciona igual con URP que con el pipeline integrado.
 Shader "Hidden/Kurogane/PS2Filter"
 {
@@ -19,6 +20,8 @@ Shader "Hidden/Kurogane/PS2Filter"
     float _BloomIntensity;
     float _Dither;
     float2 _BlurDir;
+    sampler2D _Drops;
+    float _Rain;
 
     // Descarta NaN, infinitos y negativos que a veces deja la escena en HDR; si no, la estela los
     // arrastra de cuadro en cuadro y el desenfoque los convierte en manchas negras permanentes
@@ -62,7 +65,16 @@ Shader "Hidden/Kurogane/PS2Filter"
 
     float4 FragFinal(v2f_img i) : SV_Target
     {
-        float3 c = Clean(tex2D(_MainTex, i.uv).rgb, 0) + Clean(tex2D(_Bloom, i.uv).rgb, 0) * _BloomIntensity;
+        // Gotas en pantalla con lluvia: dos capas del mapa de gotas que se deslizan hacia abajo y desvían la imagen
+        float2 uv = i.uv;
+        if (_Rain > 0.001)
+        {
+            float2 duv = uv * float2(_MainTex_TexelSize.z / _MainTex_TexelSize.w, 1) * 2.5;
+            float4 d1 = tex2D(_Drops, duv + float2(0, _Time.y * 0.05));
+            float4 d2 = tex2D(_Drops, duv * 1.6 + float2(0.37, _Time.y * 0.11));
+            uv += ((d1.rg - 0.5) * d1.a + (d2.rg - 0.5) * d2.a) * 0.03 * _Rain;
+        }
+        float3 c = Clean(tex2D(_MainTex, uv).rgb, 0) + Clean(tex2D(_Bloom, uv).rgb, 0) * _BloomIntensity;
         c = saturate(c);
         int2 p = int2(fmod(floor(i.uv * _MainTex_TexelSize.zw), 4));
         float b = lerp(0.5, Bayer[p.y * 4 + p.x], _Dither);

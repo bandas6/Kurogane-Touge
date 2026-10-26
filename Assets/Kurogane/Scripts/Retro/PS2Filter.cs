@@ -23,6 +23,12 @@ namespace Kurogane.Retro
         [Range(0, 1)] public float dither = 1;
         [Tooltip("Píxeles duros al escalar. Apagado se ve suave, como en una tele de tubo.")]
         public bool sharpPixels;
+        [Tooltip("Gotas de lluvia en pantalla (lo fija el clima).")]
+        [Range(0, 1)] public float rain;
+
+        static readonly int DropsId = Shader.PropertyToID("_Drops");
+        static readonly int RainId = Shader.PropertyToID("_Rain");
+        static Texture2D drops;
 
         static readonly int HistoryId = Shader.PropertyToID("_History");
         static readonly int BloomId = Shader.PropertyToID("_Bloom");
@@ -163,6 +169,12 @@ namespace Kurogane.Retro
             mat.SetTexture(BloomId, bloomA);
             mat.SetFloat(BloomIntensityId, bloomIntensity);
             mat.SetFloat(DitherId, dither);
+            mat.SetFloat(RainId, rain);
+            if (rain > 0)
+            {
+                if (drops == null) drops = Kurogane.Core.ProceduralTextures.RainDrops();
+                mat.SetTexture(DropsId, drops);
+            }
             Graphics.Blit(history, output, mat, 3);
 
             RenderTexture.active = previous;

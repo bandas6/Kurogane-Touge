@@ -1,7 +1,7 @@
 using System.IO;
 using System.Linq;
-using Kurogane.CameraRig;
 using Kurogane.Atmosphere;
+using Kurogane.CameraRig;
 using Kurogane.Cars;
 using Kurogane.Race;
 using Kurogane.Retro;
@@ -106,6 +106,13 @@ namespace Kurogane.EditorTools
             race.cars = new[] { panda, coupe, sedan };
             race.retro = retro;
             race.music = music;
+
+            // Perfiles de clima editables en Data/Clima (se crean con los valores de serie)
+            Directory.CreateDirectory(DataDir + "/Clima");
+            var weather = raceGo.AddComponent<WeatherSystem>();
+            weather.profiles = System.Enum.GetValues(typeof(WeatherKind)).Cast<WeatherKind>()
+                .Select(k => LoadOrCreate($"{DataDir}/Clima/{k}.asset", () => WeatherProfile.Preset(k))).ToArray();
+            AssetDatabase.SaveAssets();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             var scenes = EditorBuildSettings.scenes.ToList();
