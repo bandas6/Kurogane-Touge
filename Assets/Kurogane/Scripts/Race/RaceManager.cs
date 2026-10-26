@@ -3,6 +3,8 @@ using System.IO;
 using Kurogane.CameraRig;
 using Kurogane.Cars;
 using Kurogane.Controls;
+using Kurogane.Retro;
+using Kurogane.Sound;
 using Kurogane.Track;
 using UnityEngine;
 
@@ -35,6 +37,13 @@ namespace Kurogane.Race
         public bool useMph;
         [Tooltip("Empieza en el menú de coche y opciones. Si está apagado, arranca la bajada directamente con estos valores.")]
         public bool showMenuOnStart = true;
+
+        [Header("Pantalla y sonido")]
+        public PS2Filter retro;
+        public MusicPlayer music;
+        public bool retroFilter = true;
+        [Range(0, 10)] public int soundVolume = 8;
+        [Range(0, 10)] public int musicVolume = 6;
 
         [Header("Nota final")]
         [Tooltip("Tiempo de referencia (s): bajar en este tiempo da 30 de los 40 puntos de tiempo; cada segundo menos suma 1.")]
@@ -77,6 +86,7 @@ namespace Kurogane.Race
         {
             if (cars == null || cars.Length == 0) cars = new[] { CarSpec.CreatePanda(), CarSpec.CreateCoupe(), CarSpec.CreateSedan() };
             if (showMenuOnStart) RaceSettings.Load(this);
+            ApplyOptions();
             track.Build();
             player.WallHit += OnWallHit;
             player.RivalContact += v => { Water = Mathf.Max(0, Water - v * 0.8f); chaseCamera.Shake(0.4f); };
@@ -114,6 +124,7 @@ namespace Kurogane.Race
 
             chaseCamera.target = player;
             chaseCamera.Snap();
+            if (retro != null) retro.ResetHistory();
 
             State = RaceState.Countdown;
             countdown = 3.6f;

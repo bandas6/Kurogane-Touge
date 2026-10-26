@@ -1,5 +1,6 @@
 using Kurogane.Cars;
 using Kurogane.Controls;
+using Kurogane.Sound;
 using UnityEngine;
 
 namespace Kurogane.Race
@@ -13,13 +14,15 @@ namespace Kurogane.Race
 
     /// <summary>
     /// Fase 2: menú de coche y opciones, menú de pausa, caja de cambios en pantalla y nota final S–C.
+    /// Fase 4: opciones de filtro PS2 y volúmenes de sonido y música.
     /// Sigue siendo IMGUI provisional (se navega con teclado, mando o ratón); la interfaz definitiva llega en la Fase 5.
     /// </summary>
     public partial class RaceManager
     {
-        enum MenuRow { Coche, Modo, Rival, Caja, Velocidad, Empezar }
+        enum MenuRow { Coche, Modo, Rival, Caja, Velocidad, Filtro, Sonido, Musica, Empezar }
 
         static readonly MenuRow[] Rows = (MenuRow[])System.Enum.GetValues(typeof(MenuRow));
+        static readonly string[] RowLabels = { "Coche", "Modo", "Rival", "Caja", "Velocidad", "Filtro PS2", "Sonido", "Música", "" };
         static readonly string[] PauseRows = { "Continuar", "Reiniciar bajada", "Menú principal" };
         static readonly string[] SkillNames = { "Fácil", "Normal", "Leyenda" };
 
@@ -59,7 +62,16 @@ namespace Kurogane.Race
             player.GetComponent<CarVisual>().Build(ps);
             chaseCamera.target = player;
             chaseCamera.Snap();
+            if (retro != null) retro.ResetHistory();
             best = LoadBest();
+        }
+
+        /// <summary>Aplica filtro y volúmenes; se llama al cargar y cada vez que cambian en el menú.</summary>
+        void ApplyOptions()
+        {
+            if (retro != null) retro.enabled = retroFilter;
+            CarAudio.MasterVolume = soundVolume / 10f;
+            if (music != null) music.volume = musicVolume / 10f;
         }
 
         void MenuInput()
@@ -95,7 +107,11 @@ namespace Kurogane.Race
                 case MenuRow.Rival: rivalSkill = (RivalSkill)(((int)rivalSkill + dir + 3) % 3); break;
                 case MenuRow.Caja: manualGearbox = !manualGearbox; break;
                 case MenuRow.Velocidad: useMph = !useMph; break;
+                case MenuRow.Filtro: retroFilter = !retroFilter; break;
+                case MenuRow.Sonido: soundVolume = Mathf.Clamp(soundVolume + dir, 0, 10); break;
+                case MenuRow.Musica: musicVolume = Mathf.Clamp(musicVolume + dir, 0, 10); break;
             }
+            ApplyOptions();
         }
 
         void BeginRace()
@@ -113,14 +129,19 @@ namespace Kurogane.Race
                 case MenuRow.Rival: return mode == RaceMode.Batalla ? SkillNames[(int)rivalSkill] : "—";
                 case MenuRow.Caja: return manualGearbox ? "Manual (Q / E)" : "Automática";
                 case MenuRow.Velocidad: return useMph ? "mph" : "km/h";
+                case MenuRow.Filtro: return retro == null ? "No disponible" : retroFilter ? "Sí" : "No";
+                case MenuRow.Sonido: return Bar(soundVolume);
+                case MenuRow.Musica: return music == null || music.tracks == null || music.tracks.Length == 0 ? Bar(musicVolume) + "  (sin pistas)" : Bar(musicVolume);
                 default: return "";
             }
         }
 
+        static string Bar(int value) => new string('■', value) + new string('□', 10 - value);
+
         void DrawMenu(float u)
         {
-            float x = 40 * u, y = 50 * u, w = 600 * u, rowH = 46 * u;
-            float h = 150 * u + Rows.Length * rowH + 150 * u;
+            float x = 40 * u, y = 36 * u, w = 600 * u, rowH = 40 * u;
+            float h = 136 * u + Rows.Length * rowH + 110 * u;
             Fill(new Rect(x, y, w, h), PanelColor);
 
             GUI.Label(new Rect(x + 20 * u, y + 12 * u, w, 40 * u), "黒鉄峠  KUROGANE TOUGE", mid);
@@ -144,7 +165,7 @@ namespace Kurogane.Race
                 }
                 else
                 {
-                    if (GUI.Button(new Rect(r.x, r.y, 170 * u, r.height), "  " + row, mid) && enabled) menuRow = i;
+                    if (GUI.Button(new Rect(r.x, r.y, 170 * u, r.height), "  " + RowLabels[i], mid) && enabled) menuRow = i;
                     var left = new Rect(r.x + 180 * u, r.y, 44 * u, r.height);
                     var right = new Rect(r.xMax - 50 * u, r.y, 44 * u, r.height);
                     var value = new Rect(left.xMax, r.y, right.x - left.xMax, r.height);
