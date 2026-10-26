@@ -98,7 +98,7 @@ Assets/Kurogane/
     Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer
   Shaders/    PS2Filter.shader
   Audio/      Musica/ (pistas propias, ver LEEME.txt)
-  Editor/     Menú "Kurogane"
+  Editor/     Menú "Kurogane": crear escena (KuroganeSceneSetup) y compilar (KuroganeBuild)
   Data/       Assets de pista y coches (los genera el menú)
   Scenes/     Escenas
 ```
@@ -115,12 +115,56 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | 3 | Arte: coches modelados en Blender, texturas a mano, público, señales, lightmaps, mallas horneadas | ⏳ |
 | 4 | Filtro PS2 (estela entre cuadros, brillo, tramado, color de 16 bits) y audio (motor por coche, turbo, eurobeat) | ✅ (la música la pones tú) |
 | 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | ✅ |
-| 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | 🧪 en prueba (falta medir en un Android real) |
-| 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | ⏳ |
+| 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | ✅ (falta medir en un Android real) |
+| 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | 🧪 en prueba |
 
-## Antes de compilar para Android o PC
+## Compilar
 
-Los materiales de la Fase 1 se crean con `Shader.Find`. En una build solo existen los shaders que algo referencia. Hasta la Fase 3, que hornea materiales, añade `Universal Render Pipeline/Lit` y `Universal Render Pipeline/Unlit` en **Project Settings → Graphics → Always Included Shaders**.
+Menú **Kurogane → Compilar** (las compilaciones van a `Builds/`, que no se sube al repositorio):
+
+| Opción | Resultado |
+|---|---|
+| Windows x64 | `Builds/Windows/Kurogane Touge.exe` (Mono) |
+| Android AAB (Google Play) | `Builds/Android/KuroganeTouge-<versión>-<código>.aab`, firmado con tu keystore |
+| Android APK de desarrollo (Profiler) | APK con firma de depuración que se instala en el móvil conectado por USB y se conecta al Profiler |
+
+Cada opción deja configurado el proyecto: nombre, versión, identificador `com.bandas6.kuroganetouge`, solo horizontal, y en Android IL2CPP, ARM64 y Android 8.0 (API 26) como mínimo. También añade a **Always Included Shaders** los shaders que el juego busca por nombre (`Shader.Find`), que si no faltarían en la build. El AAB sube solo el código de versión de Android en cada compilación.
+
+Antes de la primera subida a Google Play, revisa el identificador y la versión en `Assets/Kurogane/Editor/KuroganeBuild.cs`: el identificador no se puede cambiar después.
+
+**Módulos de Unity**: la compilación para Windows (Mono) viene con el editor de Windows. Para Android, en Unity Hub → Installs → tu versión → Add modules, instala *Android Build Support* con *OpenJDK* y *Android SDK & NDK Tools*.
+
+### Firma de Android
+
+Google Play exige un AAB firmado con tu clave de subida. La clave y sus contraseñas nunca van al repositorio (`*.keystore` y `*.jks` están en `.gitignore`).
+
+1. Crea la clave una sola vez con el `keytool` del JDK que trae Unity, y guárdala **fuera** de la carpeta del proyecto:
+
+   ```powershell
+   & "C:\Program Files\Unity\Hub\Editor\<versión>\Editor\Data\PlaybackEngines\AndroidPlayer\OpenJDK\bin\keytool.exe" `
+     -genkeypair -v -keystore "$HOME\claves\kurogane.keystore" -alias kurogane -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+2. Haz una copia de seguridad de ese archivo y de sus contraseñas. Con *Play App Signing* Google guarda la clave final, pero sin la de subida no podrás publicar actualizaciones hasta pedir que la restablezcan.
+3. Antes de abrir Unity, define las variables de entorno en la misma consola (o como variables de usuario de Windows):
+
+   ```powershell
+   $env:KUROGANE_KEYSTORE = "$HOME\claves\kurogane.keystore"
+   $env:KUROGANE_KEYSTORE_PASS = "<contraseña del keystore>"
+   $env:KUROGANE_KEY_ALIAS = "kurogane"
+   $env:KUROGANE_KEY_PASS = "<contraseña de la clave>"   # si no la defines, se usa la del keystore
+   ```
+
+4. **Kurogane → Compilar → Android AAB (Google Play)**. Al terminar, la ruta del keystore se borra de ProjectSettings para que no se suba al repositorio.
+
+Sin abrir el editor (con Unity cerrado):
+
+```powershell
+& "<ruta de Unity>\Editor\Unity.exe" -batchmode -quit -projectPath . -logFile Builds\android.log `
+  -executeMethod Kurogane.EditorTools.KuroganeBuild.BuildAndroidRelease
+```
+
+(`BuildWindows` y `BuildAndroidDevelopment` funcionan igual.)
 
 ## Nombres y derechos
 
