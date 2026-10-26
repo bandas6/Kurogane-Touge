@@ -8,7 +8,9 @@ namespace Kurogane.Race
     {
         const string Car = "kurogane.coche", Mode = "kurogane.modo", Skill = "kurogane.rival",
             Manual = "kurogane.cajaManual", Mph = "kurogane.mph", Retro = "kurogane.filtroPS2",
-            Sound = "kurogane.volumenSonido", Music = "kurogane.volumenMusica";
+            Sound = "kurogane.volumenSonido", Music = "kurogane.volumenMusica", Touch = "kurogane.tactil",
+            Vsync = "kurogane.vsync", Quality = "kurogane.calidad", ScreenKey = "kurogane.pantalla",
+            ResW = "kurogane.resAncho", ResH = "kurogane.resAlto";
 
         public static void Load(RaceManager r)
         {
@@ -21,6 +23,12 @@ namespace Kurogane.Race
             r.retroFilter = PlayerPrefs.GetInt(Retro, r.retroFilter ? 1 : 0) == 1;
             r.soundVolume = Mathf.Clamp(PlayerPrefs.GetInt(Sound, r.soundVolume), 0, 10);
             r.musicVolume = Mathf.Clamp(PlayerPrefs.GetInt(Music, r.musicVolume), 0, 10);
+            r.touchControls = (TouchMode)Mathf.Clamp(PlayerPrefs.GetInt(Touch, (int)r.touchControls), 0, 2);
+            r.vSync = PlayerPrefs.GetInt(Vsync, r.vSync ? 1 : 0) == 1;
+            r.qualityLevel = Mathf.Clamp(PlayerPrefs.GetInt(Quality, r.qualityLevel), -1, QualitySettings.names.Length - 1);
+            r.screenMode = PlayerPrefs.GetInt(ScreenKey, (int)r.screenMode) == (int)FullScreenMode.Windowed
+                ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow;
+            r.resolution = new Vector2Int(PlayerPrefs.GetInt(ResW, r.resolution.x), PlayerPrefs.GetInt(ResH, r.resolution.y));
         }
 
         public static void Save(RaceManager r)
@@ -33,6 +41,12 @@ namespace Kurogane.Race
             PlayerPrefs.SetInt(Retro, r.retroFilter ? 1 : 0);
             PlayerPrefs.SetInt(Sound, r.soundVolume);
             PlayerPrefs.SetInt(Music, r.musicVolume);
+            PlayerPrefs.SetInt(Touch, (int)r.touchControls);
+            PlayerPrefs.SetInt(Vsync, r.vSync ? 1 : 0);
+            PlayerPrefs.SetInt(Quality, r.qualityLevel);
+            PlayerPrefs.SetInt(ScreenKey, (int)r.screenMode);
+            PlayerPrefs.SetInt(ResW, r.resolution.x);
+            PlayerPrefs.SetInt(ResH, r.resolution.y);
             PlayerPrefs.Save();
         }
     }

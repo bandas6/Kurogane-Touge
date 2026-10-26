@@ -1,7 +1,12 @@
+using System.Collections.Generic;
+using System.Linq;
 using Kurogane.Cars;
 using Kurogane.Controls;
 using Kurogane.Sound;
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace Kurogane.Race
 {
@@ -12,47 +17,67 @@ namespace Kurogane.Race
         public string letter;
     }
 
+    public enum MenuRow
+    {
+        Coche, Modo, Rival, Caja, Opciones, Empezar,
+        Velocidad, Filtro, Sonido, Musica, Tactil, Resolucion, Pantalla, Vsync, Calidad, Volver
+    }
+
+    public enum TouchMode { Auto, Si, No }
+
     /// <summary>
-    /// Fase 2: menú de coche y opciones, menú de pausa, caja de cambios en pantalla y nota final S–C.
-    /// Fase 4: opciones de filtro PS2 y volúmenes de sonido y música.
-    /// Sigue siendo IMGUI provisional (se navega con teclado, mando o ratón); la interfaz definitiva llega en la Fase 5.
+    /// Lógica del menú (página de carrera y página de opciones), la pausa, las opciones de pantalla y la nota final.
+    /// Teclado y mando navegan aquí; <see cref="Kurogane.Hud.MenuView"/> lo dibuja y llama a estos métodos al
+    /// pulsar con el ratón o el dedo.
     /// </summary>
     public partial class RaceManager
     {
-        enum MenuRow { Coche, Modo, Rival, Caja, Velocidad, Filtro, Sonido, Musica, Empezar }
+        [Header("Controles y pantalla")]
+        public TouchMode touchControls = TouchMode.Auto;
+        public bool vSync = true;
+        [Tooltip("Nivel de calidad elegido en el menú; -1 deja el de Project Settings.")]
+        public int qualityLevel = -1;
+        public FullScreenMode screenMode = FullScreenMode.FullScreenWindow;
+        [Tooltip("Resolución elegida en el menú; (0, 0) deja la actual.")]
+        public Vector2Int resolution;
 
-        static readonly MenuRow[] Rows = (MenuRow[])System.Enum.GetValues(typeof(MenuRow));
-        static readonly string[] RowLabels = { "Coche", "Modo", "Rival", "Caja", "Velocidad", "Filtro PS2", "Sonido", "Música", "" };
-        static readonly string[] PauseRows = { "Continuar", "Reiniciar bajada", "Menú principal" };
+        static readonly MenuRow[] RacePage = { MenuRow.Coche, MenuRow.Modo, MenuRow.Rival, MenuRow.Caja, MenuRow.Opciones, MenuRow.Empezar };
+        static readonly MenuRow[] OptionsPageDesktop =
+        {
+            MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil,
+            MenuRow.Resolucion, MenuRow.Pantalla, MenuRow.Vsync, MenuRow.Calidad, MenuRow.Volver
+        };
+        static readonly MenuRow[] OptionsPageMobile =
+        {
+            MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil, MenuRow.Calidad, MenuRow.Volver
+        };
+        public static readonly string[] PauseLabels = { "Continuar", "Reiniciar bajada", "Menú principal" };
         static readonly string[] SkillNames = { "Fácil", "Normal", "Leyenda" };
 
-        /// <summary>A partir de estas vueltas se enciende la luz de cambio (la caja automática sube a 7.700).</summary>
-        const float ShiftRpm = 7700;
-
-        static readonly Color PanelColor = new Color(0.02f, 0.03f, 0.08f, 0.7f);
-        static readonly Color Highlight = new Color(0.8f, 0.16f, 0.22f, 0.6f);
-        static readonly Color Pale = new Color(0.9f, 0.92f, 1f);
-        static readonly Color Amber = new Color(1f, 0.74f, 0.2f);
-        static readonly Color Red = new Color(1f, 0.24f, 0.2f);
-
         public RaceGrade Result { get; private set; }
+        public bool InOptions { get; private set; }
+        public int MenuIndex => menuRow;
+        public int PauseIndex => pauseRow;
+        public IReadOnlyList<MenuRow> MenuRows => InOptions ? (Application.isMobilePlatform ? OptionsPageMobile : OptionsPageDesktop) : RacePage;
 
-        int menuRow, pauseRow, shownGear;
-        float gearChangedAt = -1;
+        int menuRow, pauseRow;
+        Light showroomLight;
+        Vector2Int[] resolutions;
 
-        // ---------- Menú principal ----------
+        // ---------- Menú principal y garaje ----------
 
-        void OpenMenu()
+        public void OpenMenu()
         {
             Time.timeScale = 1;
             State = RaceState.Menu;
-            menuRow = (int)MenuRow.Empezar;
+            InOptions = false;
+            menuRow = System.Array.IndexOf(RacePage, MenuRow.Empezar);
             rival.gameObject.SetActive(false);
             player.rival = null;
             PreviewCar();
         }
 
-        /// <summary>Pone el coche elegido en la salida, parado, para verlo detrás del menú.</summary>
+        /// <summary>Pone el coche elegido en la salida, parado, con la cámara de garaje girando alrededor.</summary>
         void PreviewCar()
         {
             var ps = PlayerSpec;
@@ -61,35 +86,90 @@ namespace Kurogane.Race
             player.AutoBrake = false;
             player.GetComponent<CarVisual>().Build(ps);
             chaseCamera.target = player;
+            chaseCamera.showroom = true;
             chaseCamera.Snap();
             if (retro != null) retro.ResetHistory();
+            SetShowroomLight(true);
             best = LoadBest();
         }
 
-        /// <summary>Aplica filtro y volúmenes; se llama al cargar y cada vez que cambian en el menú.</summary>
-        void ApplyOptions()
+        /// <summary>Luz cálida encima del coche mientras está en el garaje.</summary>
+        void SetShowroomLight(bool on)
         {
-            if (retro != null) retro.enabled = retroFilter;
-            CarAudio.MasterVolume = soundVolume / 10f;
-            if (music != null) music.volume = musicVolume / 10f;
+            if (showroomLight == null)
+            {
+                if (!on) return;
+                showroomLight = new GameObject("Luz del garaje").AddComponent<Light>();
+                showroomLight.type = LightType.Point;
+                showroomLight.color = new Color(1f, 0.86f, 0.7f);
+                showroomLight.range = 14;
+                showroomLight.intensity = 2.2f;
+            }
+            showroomLight.enabled = on;
+            if (on) showroomLight.transform.position = player.transform.position + Vector3.up * 4.5f + player.transform.forward * 1.5f;
         }
 
         void MenuInput()
         {
             if (DriverInput.MenuUp) MoveRow(-1);
             if (DriverInput.MenuDown) MoveRow(1);
-            if (DriverInput.MenuLeft) Change((MenuRow)menuRow, -1);
-            if (DriverInput.MenuRight) Change((MenuRow)menuRow, 1);
-            if (DriverInput.NextCar) Change(MenuRow.Coche, 1);
-            if (DriverInput.Confirm) BeginRace();
+            if (DriverInput.MenuLeft) Change(MenuRows[menuRow], -1);
+            if (DriverInput.MenuRight) Change(MenuRows[menuRow], 1);
+            if (!InOptions && DriverInput.NextCar) Change(MenuRow.Coche, 1);
+            if (DriverInput.Confirm) Activate(MenuRows[menuRow]);
+            else if (InOptions && DriverInput.Pause) Activate(MenuRow.Volver);
         }
 
-        bool RowEnabled(MenuRow row) => row != MenuRow.Rival || mode == RaceMode.Batalla;
+        public bool RowEnabled(MenuRow row) => row != MenuRow.Rival || mode == RaceMode.Batalla;
+        public static bool IsAction(MenuRow row) => row == MenuRow.Opciones || row == MenuRow.Empezar || row == MenuRow.Volver;
 
         void MoveRow(int dir)
         {
-            do menuRow = (menuRow + dir + Rows.Length) % Rows.Length;
-            while (!RowEnabled((MenuRow)menuRow));
+            var rows = MenuRows;
+            do menuRow = (menuRow + dir + rows.Count) % rows.Count;
+            while (!RowEnabled(rows[menuRow]));
+        }
+
+        /// <summary>Clic o toque en una fila: la selecciona y, si es un botón, lo pulsa.</summary>
+        public void TapRow(int index)
+        {
+            var rows = MenuRows;
+            if (index < 0 || index >= rows.Count || !RowEnabled(rows[index])) return;
+            menuRow = index;
+            if (IsAction(rows[index])) Activate(rows[index]);
+        }
+
+        /// <summary>Clic o toque en las flechas ◀ ▶ de una fila.</summary>
+        public void ChangeRow(int index, int dir)
+        {
+            var rows = MenuRows;
+            if (index < 0 || index >= rows.Count || !RowEnabled(rows[index])) return;
+            menuRow = index;
+            Change(rows[index], dir);
+        }
+
+        void Activate(MenuRow row)
+        {
+            switch (row)
+            {
+                case MenuRow.Opciones:
+                    InOptions = true;
+                    menuRow = 0;
+                    break;
+                case MenuRow.Volver:
+                    InOptions = false;
+                    menuRow = System.Array.IndexOf(RacePage, MenuRow.Opciones);
+                    RaceSettings.Save(this);
+                    break;
+                case MenuRow.Empezar:
+                    BeginRace();
+                    break;
+                default:
+                    // En la página de carrera, Enter arranca desde cualquier fila; en opciones cambia el valor
+                    if (InOptions) Change(row, 1);
+                    else BeginRace();
+                    break;
+            }
         }
 
         void Change(MenuRow row, int dir)
@@ -110,6 +190,19 @@ namespace Kurogane.Race
                 case MenuRow.Filtro: retroFilter = !retroFilter; break;
                 case MenuRow.Sonido: soundVolume = Mathf.Clamp(soundVolume + dir, 0, 10); break;
                 case MenuRow.Musica: musicVolume = Mathf.Clamp(musicVolume + dir, 0, 10); break;
+                case MenuRow.Tactil: touchControls = (TouchMode)(((int)touchControls + dir + 3) % 3); break;
+                case MenuRow.Resolucion: StepResolution(dir); ApplyDisplay(true); break;
+                case MenuRow.Pantalla:
+                    screenMode = screenMode == FullScreenMode.Windowed ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
+                    ApplyDisplay(true);
+                    break;
+                case MenuRow.Vsync: vSync = !vSync; ApplyDisplay(false); break;
+                case MenuRow.Calidad:
+                    int n = QualitySettings.names.Length;
+                    qualityLevel = ((qualityLevel < 0 ? QualitySettings.GetQualityLevel() : qualityLevel) + dir + n) % n;
+                    ApplyDisplay(false);
+                    break;
+                default: return;
             }
             ApplyOptions();
         }
@@ -120,7 +213,30 @@ namespace Kurogane.Race
             StartRace();
         }
 
-        string RowValue(MenuRow row)
+        public void NextCarAndRestart()
+        {
+            selectedCar = (selectedCar + 1) % cars.Length;
+            RaceSettings.Save(this);
+            StartRace();
+        }
+
+        public static string RowLabel(MenuRow row)
+        {
+            switch (row)
+            {
+                case MenuRow.Opciones: return "OPCIONES";
+                case MenuRow.Empezar: return "EMPEZAR BAJADA";
+                case MenuRow.Volver: return "VOLVER";
+                case MenuRow.Filtro: return "Filtro PS2";
+                case MenuRow.Musica: return "Música";
+                case MenuRow.Tactil: return "Táctil";
+                case MenuRow.Resolucion: return "Resolución";
+                case MenuRow.Vsync: return "VSync";
+                default: return row.ToString();
+            }
+        }
+
+        public string RowValue(MenuRow row)
         {
             switch (row)
             {
@@ -132,81 +248,86 @@ namespace Kurogane.Race
                 case MenuRow.Filtro: return retro == null ? "No disponible" : retroFilter ? "Sí" : "No";
                 case MenuRow.Sonido: return Bar(soundVolume);
                 case MenuRow.Musica: return music == null || music.tracks == null || music.tracks.Length == 0 ? Bar(musicVolume) + "  (sin pistas)" : Bar(musicVolume);
+                case MenuRow.Tactil: return touchControls == TouchMode.Auto ? $"Auto ({(TouchDevice ? "sí" : "no")})" : touchControls == TouchMode.Si ? "Sí" : "No";
+                case MenuRow.Resolucion:
+                    var r = resolution == Vector2Int.zero ? new Vector2Int(Screen.width, Screen.height) : resolution;
+                    return $"{r.x} × {r.y}";
+                case MenuRow.Pantalla: return screenMode == FullScreenMode.Windowed ? "Ventana" : "Pantalla completa";
+                case MenuRow.Vsync: return vSync ? "Sí" : "No (60 fps)";
+                case MenuRow.Calidad:
+                    var names = QualitySettings.names;
+                    int q = qualityLevel < 0 ? QualitySettings.GetQualityLevel() : qualityLevel;
+                    return q >= 0 && q < names.Length ? names[q] : "—";
                 default: return "";
             }
         }
 
         static string Bar(int value) => new string('■', value) + new string('□', 10 - value);
 
-        void DrawMenu(float u)
+        // ---------- Opciones ----------
+
+        /// <summary>Aplica filtro y volúmenes; se llama al cargar y cada vez que cambian en el menú.</summary>
+        void ApplyOptions()
         {
-            float x = 40 * u, y = 36 * u, w = 600 * u, rowH = 40 * u;
-            float h = 136 * u + Rows.Length * rowH + 110 * u;
-            Fill(new Rect(x, y, w, h), PanelColor);
+            if (retro != null) retro.enabled = retroFilter;
+            CarAudio.MasterVolume = soundVolume / 10f;
+            if (music != null) music.volume = musicVolume / 10f;
+        }
 
-            GUI.Label(new Rect(x + 20 * u, y + 12 * u, w, 40 * u), "黒鉄峠  KUROGANE TOUGE", mid);
-            GUI.Label(new Rect(x + 20 * u, y + 50 * u, w, 24 * u), "Monte Kurogane · 2,3 km · 4 horquillas · 1 túnel", small);
-            GUI.Label(new Rect(x + 20 * u, y + 74 * u, w, 24 * u), PlayerSpec.tagline, small);
-            GUI.Label(new Rect(x + 20 * u, y + 98 * u, w, 24 * u), $"Récord ({RowValue(MenuRow.Modo)}) {Fmt(best.time)}", small);
+        /// <summary>Aplica VSync, calidad y, si se pide, resolución y modo de pantalla (solo en PC).</summary>
+        void ApplyDisplay(bool resolutionChanged)
+        {
+            // En móvil el VSync no se controla: se fija 60 fps (Unity limita a 30 por defecto en Android)
+            QualitySettings.vSyncCount = vSync ? 1 : 0;
+            Application.targetFrameRate = Application.isMobilePlatform || !vSync ? 60 : -1;
+            if (qualityLevel >= 0 && qualityLevel < QualitySettings.names.Length && QualitySettings.GetQualityLevel() != qualityLevel)
+                QualitySettings.SetQualityLevel(qualityLevel, true);
+            if (!resolutionChanged || Application.isMobilePlatform) return;
+            var r = resolution == Vector2Int.zero ? new Vector2Int(Screen.width, Screen.height) : resolution;
+            if (r.x != Screen.width || r.y != Screen.height || Screen.fullScreenMode != screenMode)
+                Screen.SetResolution(r.x, r.y, screenMode);
+        }
 
-            float ry = y + 136 * u;
-            for (int i = 0; i < Rows.Length; i++)
+        void StepResolution(int dir)
+        {
+            if (resolutions == null)
+                resolutions = Screen.resolutions.Select(x => new Vector2Int(x.width, x.height)).Distinct()
+                    .OrderBy(v => v.x * v.y).ToArray();
+            if (resolutions.Length == 0) return;
+            var current = resolution == Vector2Int.zero ? new Vector2Int(Screen.width, Screen.height) : resolution;
+            int i = System.Array.IndexOf(resolutions, current);
+            if (i < 0) i = resolutions.Count(v => v.x * v.y < current.x * current.y) - (dir > 0 ? 1 : 0);
+            resolution = resolutions[Mathf.Clamp(i + dir, 0, resolutions.Length - 1)];
+        }
+
+        static bool TouchDevice
+        {
+            get
             {
-                var row = Rows[i];
-                var r = new Rect(x + 10 * u, ry + i * rowH, w - 20 * u, rowH - 4 * u);
-                bool enabled = RowEnabled(row);
-                if (i == menuRow) Fill(r, Highlight);
-                var old = GUI.color;
-                if (!enabled) GUI.color = new Color(1, 1, 1, 0.35f);
-
-                if (row == MenuRow.Empezar)
-                {
-                    if (GUI.Button(r, "EMPEZAR BAJADA", center)) BeginRace();
-                }
-                else
-                {
-                    if (GUI.Button(new Rect(r.x, r.y, 170 * u, r.height), "  " + RowLabels[i], mid) && enabled) menuRow = i;
-                    var left = new Rect(r.x + 180 * u, r.y, 44 * u, r.height);
-                    var right = new Rect(r.xMax - 50 * u, r.y, 44 * u, r.height);
-                    var value = new Rect(left.xMax, r.y, right.x - left.xMax, r.height);
-                    if (GUI.Button(left, "◀", center) && enabled) { menuRow = i; Change(row, -1); }
-                    GUI.Label(value, RowValue(row), center);
-                    if (GUI.Button(right, "▶", center) && enabled) { menuRow = i; Change(row, 1); }
-                }
-                GUI.color = old;
+#if ENABLE_INPUT_SYSTEM
+                return Application.isMobilePlatform || Touchscreen.current != null;
+#else
+                return Application.isMobilePlatform || UnityEngine.Input.touchSupported;
+#endif
             }
-
-            // Ficha del coche
-            float sy = ry + Rows.Length * rowH + 14 * u;
-            var spec = PlayerSpec;
-            DrawStat(x + 20 * u, sy, u, "Potencia", spec.statPower);
-            DrawStat(x + 20 * u, sy + 26 * u, u, "Agarre", spec.statGrip);
-            DrawStat(x + 310 * u, sy, u, "Drift", spec.statDrift);
-            DrawStat(x + 310 * u, sy + 26 * u, u, "Ligereza", spec.statLightness);
-
-            GUI.Label(new Rect(x + 20 * u, sy + 70 * u, w - 40 * u, 50 * u),
-                "↑ ↓ elegir   ·   ← → cambiar   ·   Tab otro coche   ·   Enter empezar", small);
         }
 
-        void DrawStat(float x, float y, float u, string label, int value)
-        {
-            GUI.Label(new Rect(x, y, 110 * u, 24 * u), label, small);
-            for (int i = 0; i < 5; i++)
-                Fill(new Rect(x + 110 * u + i * 30 * u, y + 7 * u, 26 * u, 10 * u), i < value ? Pale : new Color(1, 1, 1, 0.15f));
-        }
+        /// <summary>Si se muestran los controles táctiles (solo durante la bajada).</summary>
+        public bool TouchVisible => touchControls == TouchMode.Si || (touchControls == TouchMode.Auto && TouchDevice);
 
         // ---------- Pausa ----------
 
         void PauseInput()
         {
             if (DriverInput.Pause) { Resume(); return; }
-            if (DriverInput.MenuUp) pauseRow = (pauseRow + PauseRows.Length - 1) % PauseRows.Length;
-            if (DriverInput.MenuDown) pauseRow = (pauseRow + 1) % PauseRows.Length;
+            if (DriverInput.MenuUp) pauseRow = (pauseRow + PauseLabels.Length - 1) % PauseLabels.Length;
+            if (DriverInput.MenuDown) pauseRow = (pauseRow + 1) % PauseLabels.Length;
             if (DriverInput.Confirm) PauseAction(pauseRow);
         }
 
-        void PauseAction(int i)
+        public void PauseAction(int i)
         {
+            pauseRow = i;
             if (i == 0) Resume();
             else if (i == 1) StartRace();
             else OpenMenu();
@@ -216,65 +337,6 @@ namespace Kurogane.Race
         {
             State = stateBeforePause;
             Time.timeScale = 1;
-        }
-
-        void DrawPause(float u)
-        {
-            float w = 420 * u, rowH = 50 * u, h = 70 * u + PauseRows.Length * rowH;
-            float x = (Screen.width - w) / 2, y = (Screen.height - h) / 2;
-            Fill(new Rect(x, y, w, h), PanelColor);
-            GUI.Label(new Rect(x, y + 10 * u, w, 40 * u), "PAUSA", center);
-            for (int i = 0; i < PauseRows.Length; i++)
-            {
-                var r = new Rect(x + 20 * u, y + 60 * u + i * rowH, w - 40 * u, rowH - 6 * u);
-                if (i == pauseRow) Fill(r, Highlight);
-                if (GUI.Button(r, PauseRows[i], center)) PauseAction(i);
-            }
-        }
-
-        // ---------- Caja de cambios en pantalla ----------
-
-        void DrawGearbox(float u)
-        {
-            float w = 360 * u, h = player.manualGearbox ? 150 * u : 110 * u;
-            float x = Screen.width - w - 20 * u, y = Screen.height - h - 20 * u;
-            Fill(new Rect(x, y, w, h), PanelColor);
-
-            float speed = player.Speed * (useMph ? 2.237f : 3.6f);
-            GUI.Label(new Rect(x + 14 * u, y + 6 * u, 240 * u, 40 * u), $"{Mathf.RoundToInt(speed)} {(useMph ? "mph" : "km/h")}", mid);
-
-            if (player.Gear != shownGear) { shownGear = player.Gear; gearChangedAt = Time.time; }
-            bool shiftLight = player.Rpm >= ShiftRpm && player.Gear < player.spec.Gears - 1;
-            bool blink = Time.unscaledTime % 0.2f < 0.1f;
-            var gearRect = new Rect(x + w - 94 * u, y + 10 * u, 80 * u, 70 * u);
-            Color gearBg = shiftLight && blink ? Red : Time.time - gearChangedAt < 0.25f ? Amber : new Color(1, 1, 1, 0.08f);
-            Fill(gearRect, gearBg);
-            GUI.Label(gearRect, (player.Gear + 1).ToString(), gearStyle);
-            GUI.Label(new Rect(gearRect.x, gearRect.yMax, gearRect.width, 22 * u), player.manualGearbox ? "MT" : "AT", smallCenter);
-
-            // Cuentavueltas por segmentos: blanco, ámbar desde 6.500 y rojo en la zona de cambio
-            const int segments = 18;
-            float barW = w - 128 * u, segW = barW / segments;
-            for (int i = 0; i < segments; i++)
-            {
-                float at = (i + 1) * 500;
-                Color c = at > ShiftRpm ? Red : at > 6500 ? Amber : Pale;
-                bool lit = player.Rpm >= at - 250;
-                Fill(new Rect(x + 14 * u + i * segW, y + 54 * u, segW - 2 * u, 18 * u), lit ? c : new Color(c.r, c.g, c.b, 0.18f));
-            }
-            GUI.Label(new Rect(x + 14 * u, y + 76 * u, barW, 24 * u),
-                $"{Mathf.RoundToInt(player.Rpm)} rpm{(shiftLight && player.manualGearbox ? "   ▲ CAMBIA" : "")}", small);
-
-            if (player.manualGearbox)
-            {
-                // Botones clicables: sirven con ratón ahora y con el dedo cuando lleguen los controles táctiles
-                var down = new Rect(x + 14 * u, y + h - 46 * u, 150 * u, 36 * u);
-                var up = new Rect(x + 174 * u, y + h - 46 * u, 150 * u, 36 * u);
-                Fill(down, new Color(1, 1, 1, 0.1f));
-                Fill(up, shiftLight ? Red : new Color(1, 1, 1, 0.1f));
-                if (GUI.Button(down, "▼  Q", center)) player.RequestShift(-1);
-                if (GUI.Button(up, "E  ▲", center)) player.RequestShift(1);
-            }
         }
 
         // ---------- Nota final ----------
@@ -292,58 +354,6 @@ namespace Kurogane.Race
             g.total = Mathf.Clamp(g.time + g.water + g.style + g.clean + g.battle, 0, 100);
             g.letter = g.total >= 90 ? "S" : g.total >= 75 ? "A" : g.total >= 60 ? "B" : "C";
             return g;
-        }
-
-        void DrawResults(float u)
-        {
-            var g = Result;
-            float w = 720 * u, h = 380 * u, x = (Screen.width - w) / 2, y = Screen.height * 0.18f;
-            Fill(new Rect(x, y, w, h), PanelColor);
-
-            string verdict = mode == RaceMode.Batalla ? (won ? "勝利 · Victoria" : "敗北 · Derrota") : "ゴール · Meta";
-            GUI.Label(new Rect(x, y + 10 * u, w, 40 * u), verdict, center);
-
-            var letterRect = new Rect(x + 30 * u, y + 70 * u, 150 * u, 150 * u);
-            Fill(letterRect, g.letter == "S" ? Red : g.letter == "A" ? Amber : new Color(1, 1, 1, 0.12f));
-            GUI.Label(letterRect, g.letter, big);
-            GUI.Label(new Rect(letterRect.x, letterRect.yMax + 4 * u, letterRect.width, 24 * u), $"{g.total} / 100", smallCenter);
-
-            float lx = letterRect.xMax + 30 * u, ly = y + 70 * u, lw = w - (lx - x) - 30 * u, lh = 30 * u;
-            GUI.Label(new Rect(lx, ly, lw, lh), $"Tiempo  {Fmt(RaceTime)}   (récord {Fmt(best.time)})", small);
-            GUI.Label(new Rect(lx, ly, lw, lh), $"{g.time} / 40", RightAligned(small));
-            GUI.Label(new Rect(lx, ly + lh, lw, lh), $"Agua  {Mathf.RoundToInt(Water)}%", small);
-            GUI.Label(new Rect(lx, ly + lh, lw, lh), $"{g.water} / 25", RightAligned(small));
-            GUI.Label(new Rect(lx, ly + lh * 2, lw, lh), $"Estilo  {Score} drift · {gutterRuns} canaletas", small);
-            GUI.Label(new Rect(lx, ly + lh * 2, lw, lh), $"{g.style} / 20", RightAligned(small));
-            GUI.Label(new Rect(lx, ly + lh * 3, lw, lh), $"Limpieza  {hits} golpes", small);
-            GUI.Label(new Rect(lx, ly + lh * 3, lw, lh), $"{g.clean} / 15", RightAligned(small));
-            if (mode == RaceMode.Batalla)
-            {
-                GUI.Label(new Rect(lx, ly + lh * 4, lw, lh), won ? "Batalla ganada" : "Batalla perdida", small);
-                GUI.Label(new Rect(lx, ly + lh * 4, lw, lh), (g.battle > 0 ? "+" : "") + g.battle, RightAligned(small));
-            }
-
-            GUI.Label(new Rect(x, y + h - 50 * u, w, 30 * u),
-                $"Enter otra bajada   ·   Tab cambiar coche ({cars[(selectedCar + 1) % cars.Length].displayName})   ·   Esc menú", smallCenter);
-        }
-
-        // ---------- Utilidades de dibujo ----------
-
-        GUIStyle rightAligned;
-
-        GUIStyle RightAligned(GUIStyle from)
-        {
-            if (rightAligned == null) rightAligned = new GUIStyle(from) { alignment = TextAnchor.UpperRight };
-            rightAligned.fontSize = from.fontSize;
-            return rightAligned;
-        }
-
-        static void Fill(Rect r, Color c)
-        {
-            var old = GUI.color;
-            GUI.color = c;
-            GUI.DrawTexture(r, Texture2D.whiteTexture);
-            GUI.color = old;
         }
     }
 }

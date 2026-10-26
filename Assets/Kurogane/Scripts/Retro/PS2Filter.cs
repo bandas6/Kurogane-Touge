@@ -1,11 +1,13 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Kurogane.Retro
 {
     /// <summary>
     /// Filtro PS2: la cámara dibuja a baja resolución (448 líneas, como la PS2 en NTSC) y la imagen se compone con
     /// estela entre cuadros, brillo, tramado y color de 16 bits antes de mostrarse a pantalla completa.
-    /// Compone con Graphics.Blit y la dibuja con IMGUI por debajo del HUD, así que no depende del pipeline.
+    /// Compone con Graphics.Blit en LateUpdate (sobre el cuadro anterior, un cuadro de retraso que no se nota) y lo
+    /// muestra en un RawImage al fondo de su propio lienzo, debajo del HUD, así que no depende del pipeline.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public class PS2Filter : MonoBehaviour
@@ -31,6 +33,8 @@ namespace Kurogane.Retro
         static readonly int BlurDirId = Shader.PropertyToID("_BlurDir");
 
         Camera cam, display;
+        Canvas canvas;
+        RawImage screen;
         Material mat;
         RenderTexture frame, history, historyNext, bloomA, bloomB, output;
         bool historyValid;
@@ -58,6 +62,19 @@ namespace Kurogane.Retro
             display.depth = cam.depth + 10;
             display.allowHDR = false;
             display.allowMSAA = false;
+
+            // Lienzo al fondo de todo: los lienzos del HUD y los menús tienen un orden mayor
+            canvas = new GameObject("Imagen PS2", typeof(Canvas)) { hideFlags = HideFlags.DontSave }.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = -100;
+            screen = new GameObject("Pantalla", typeof(RectTransform)).AddComponent<RawImage>();
+            screen.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)screen.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            screen.raycastTarget = false;
+            screen.color = Color.black;
             EnsureTargets();
         }
 
@@ -65,19 +82,27 @@ namespace Kurogane.Retro
         {
             if (cam != null) cam.targetTexture = null;
             if (display != null) Destroy(display.gameObject);
+            if (canvas != null) Destroy(canvas.gameObject);
             Release();
             if (mat != null) Destroy(mat);
         }
 
-        void LateUpdate() => EnsureTargets();
+        void LateUpdate()
+        {
+            if (EnsureTargets()) return; // texturas nuevas: la cámara aún no ha dibujado en ellas
+            Composite();
+            screen.texture = output;
+            screen.color = Color.white;
+        }
 
-        void EnsureTargets()
+        /// <summary>Crea las texturas si no existen o si cambió el tamaño de la pantalla. Devuelve si las creó.</summary>
+        bool EnsureTargets()
         {
             int h = height, w = Mathf.Max(1, Mathf.RoundToInt(h * Screen.width / (float)Mathf.Max(1, Screen.height)));
             if (frame != null && frame.width == w && frame.height == h)
             {
                 output.filterMode = sharpPixels ? FilterMode.Point : FilterMode.Bilinear;
-                return;
+                return false;
             }
             Release();
             var hdr = SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR) ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default;
@@ -90,6 +115,8 @@ namespace Kurogane.Retro
             output.filterMode = sharpPixels ? FilterMode.Point : FilterMode.Bilinear;
             cam.targetTexture = frame;
             historyValid = false;
+            if (screen != null) { screen.texture = null; screen.color = Color.black; }
+            return true;
         }
 
         static RenderTexture Create(int w, int h, int depth, RenderTextureFormat format)
@@ -109,15 +136,6 @@ namespace Kurogane.Retro
             foreach (var rt in new[] { frame, history, historyNext, bloomA, bloomB, output })
                 if (rt != null) { rt.Release(); Destroy(rt); }
             frame = history = historyNext = bloomA = bloomB = output = null;
-        }
-
-        void OnGUI()
-        {
-            // Mayor profundidad = se dibuja antes, así el HUD del RaceManager queda encima
-            GUI.depth = 10;
-            if (Event.current.type != EventType.Repaint || frame == null) return;
-            Composite();
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), output, ScaleMode.StretchToFill, false);
         }
 
         void Composite()
