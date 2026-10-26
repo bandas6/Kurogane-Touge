@@ -1,0 +1,131 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a75bde26e257ba46869cd9a5e695e1b, type: 3}
+  m_Name: MonteKurogane
+  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Track.TrackDefinition
+  step: 2
+  halfWidth: 5.2
+  slope: 0.055
+  hairpinSlope: 0.035
+  segments:
+  - type: 0
+    angle: 0
+    lengthOrRadius: 110
+    tunnel: 0
+  - type: 1
+    angle: 50
+    lengthOrRadius: 70
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 70
+    tunnel: 0
+  - type: 1
+    angle: -70
+    lengthOrRadius: 80
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 90
+    tunnel: 0
+  - type: 1
+    angle: 35
+    lengthOrRadius: 40
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 120
+    tunnel: 0
+  - type: 2
+    angle: -175
+    lengthOrRadius: 18
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 110
+    tunnel: 0
+  - type: 2
+    angle: 175
+    lengthOrRadius: 18
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 90
+    tunnel: 0
+  - type: 1
+    angle: -60
+    lengthOrRadius: 70
+    tunnel: 0
+  - type: 1
+    angle: 45
+    lengthOrRadius: 60
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 150
+    tunnel: 1
+  - type: 1
+    angle: 90
+    lengthOrRadius: 90
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 60
+    tunnel: 0
+  - type: 1
+    angle: -30
+    lengthOrRadius: 40
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 80
+    tunnel: 0
+  - type: 2
+    angle: 175
+    lengthOrRadius: 17
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 100
+    tunnel: 0
+  - type: 2
+    angle: -175
+    lengthOrRadius: 17
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 130
+    tunnel: 0
+  - type: 1
+    angle: -50
+    lengthOrRadius: 70
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 60
+    tunnel: 0
+  - type: 1
+    angle: 70
+    lengthOrRadius: 80
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 120
+    tunnel: 0
+  - type: 1
+    angle: -40
+    lengthOrRadius: 50
+    tunnel: 0
+  - type: 0
+    angle: 0
+    lengthOrRadius: 160
+    tunnel: 0

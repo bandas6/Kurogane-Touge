@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2ff74a5d905f9746bb51fce43bc6a76, type: 3}
+  m_Name: Car_Sedan
+  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Cars.CarSpec
+  displayName: "Sed\xE1n GT-4WD"
+  tagline: "4WD \xB7 2.6 L 6 cilindros turbo \xB7 280 cv \xB7 1430 kg"
+  model: 2
+  gearTopSpeed:
+  - 13.5
+  - 23
+  - 32.5
+  - 42
+  - 52
+  gearAccel:
+  - 11.2
+  - 8.6
+  - 6.6
+  - 5.1
+  - 4
+  grip: 9.6
+  driftGrip: 2.4
+  yawRate: 2.25
+  allWheelDrive: 1
+  turbo: 1
+  statPower: 5
+  statGrip: 5
+  statDrift: 2
+  statLightness: 2
+  paint: {r: 0.235, g: 0.25, b: 0.28, a: 1}
+  band: {r: 0.086, g: 0.094, b: 0.11, a: 1}
+  doorText: 

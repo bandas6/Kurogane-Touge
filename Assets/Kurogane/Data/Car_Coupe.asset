@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2ff74a5d905f9746bb51fce43bc6a76, type: 3}
+  m_Name: Car_Coupe
+  m_EditorClassIdentifier: Assembly-CSharp::Kurogane.Cars.CarSpec
+  displayName: "Coup\xE9 Rotativo"
+  tagline: "FR \xB7 rotativo biturbo \xB7 255 cv \xB7 1280 kg"
+  model: 1
+  gearTopSpeed:
+  - 14
+  - 24
+  - 33.5
+  - 42.5
+  - 53
+  gearAccel:
+  - 10.8
+  - 8.3
+  - 6.4
+  - 5
+  - 3.9
+  grip: 7.2
+  driftGrip: 1.35
+  yawRate: 2.45
+  allWheelDrive: 0
+  turbo: 1
+  statPower: 4
+  statGrip: 4
+  statDrift: 4
+  statLightness: 3
+  paint: {r: 0.114, g: 0.247, b: 0.612, a: 1}
+  band: {r: 0.055, g: 0.12, b: 0.32, a: 1}
+  doorText: 
