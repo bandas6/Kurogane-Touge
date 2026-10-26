@@ -187,6 +187,50 @@ namespace Kurogane.Core
             }
         }
 
+        /// <summary>
+        /// Fusiona todas las mallas que cuelgan de <paramref name="parent"/> en una por material (menos llamadas
+        /// de dibujo) y elimina las piezas originales. <paramref name="owned"/> es la lista de mallas creadas por
+        /// código: las originales que estén en ella se destruyen y las fusionadas se añaden, para poder liberarlas
+        /// después. Las mallas de las primitivas de Unity nunca están en esa lista, así que no se tocan.
+        /// </summary>
+        public static void MergeByMaterial(Transform parent, List<Mesh> owned)
+        {
+            var groups = new Dictionary<Material, List<CombineInstance>>();
+            var toRemove = new List<GameObject>();
+            var sources = new HashSet<Mesh>();
+            var toLocal = parent.worldToLocalMatrix;
+            foreach (var mr in parent.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (mr.transform == parent) continue;
+                var mf = mr.GetComponent<MeshFilter>();
+                if (mf == null || mf.sharedMesh == null || mr.sharedMaterial == null) continue;
+                if (!groups.TryGetValue(mr.sharedMaterial, out var list)) groups[mr.sharedMaterial] = list = new List<CombineInstance>();
+                list.Add(new CombineInstance { mesh = mf.sharedMesh, transform = toLocal * mr.transform.localToWorldMatrix });
+                toRemove.Add(mr.gameObject);
+                sources.Add(mf.sharedMesh);
+            }
+            foreach (var g in groups)
+            {
+                var m = new Mesh { name = "Fusión " + g.Key.name };
+                m.CombineMeshes(g.Value.ToArray(), true, true);
+                owned.Add(m);
+                var go = new GameObject("Fusión");
+                go.transform.SetParent(parent, false);
+                go.AddComponent<MeshFilter>().sharedMesh = m;
+                go.AddComponent<MeshRenderer>().sharedMaterial = g.Key;
+            }
+            foreach (var go in toRemove)
+            {
+                go.SetActive(false);
+                if (Application.isPlaying) Object.Destroy(go); else Object.DestroyImmediate(go);
+            }
+            foreach (var m in sources)
+            {
+                if (!owned.Remove(m)) continue;
+                if (Application.isPlaying) Object.Destroy(m); else Object.DestroyImmediate(m);
+            }
+        }
+
         /// <summary>Combina muchas mallas iguales (árboles, postes) en una o varias mallas grandes.</summary>
         public static List<Mesh> Combine(Mesh mesh, IList<Matrix4x4> matrices)
         {

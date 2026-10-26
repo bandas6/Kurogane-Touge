@@ -8,6 +8,8 @@ namespace Kurogane.Track
     /// Construye en tiempo de ejecución la carretera, laderas, muros, guardarraíles, túnel, faroles y bosque
     /// a partir de una <see cref="TrackDefinition"/>. En la Fase 3 esto pasa a una herramienta de editor que
     /// hornea las mallas como assets.
+    /// Rendimiento (Fase 6): las cintas van en tramos y los objetos repetidos en celdas, para que se descarten
+    /// fuera de cámara; postes y luces se apagan por distancia con <see cref="DetailCulling"/>.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public class TrackBuilder : MonoBehaviour
@@ -17,10 +19,21 @@ namespace Kurogane.Track
         public int seed = 86;
         [Range(0, 1200)] public int treeCount = 760;
 
+        [Header("Rendimiento")]
+        [Tooltip("Puntos de pista por tramo de malla (cada punto son 2 m). Tramos cortos se descartan mejor fuera de cámara.")]
+        [Range(10, 200)] public int chunkPoints = 40;
+        [Tooltip("Lado en metros de las celdas en que se agrupan árboles, postes y faroles.")]
+        public float cellSize = 60;
+        [Tooltip("Distancia a la que se apagan postes, catadióptricos y ojos de gato.")]
+        public float detailDistance = 130;
+        [Tooltip("Distancia a la que se apagan las luces de faroles y túnel (más su alcance).")]
+        public float lightDistance = 90;
+
         public TrackData Data { get; private set; }
 
         Transform root;
         System.Random rng;
+        DetailCulling culling;
 
         void Awake() => Build();
 
@@ -32,17 +45,19 @@ namespace Kurogane.Track
             rng = new System.Random(seed);
             root = new GameObject("Generated").transform;
             root.SetParent(transform, false);
+            culling = GetComponent<DetailCulling>();
+            if (culling == null) culling = gameObject.AddComponent<DetailCulling>();
 
             var d = Data;
             float W = d.W;
 
             // Calzada
             var road = MaterialFactory.Lit(Color.white, ProceduralTextures.Asphalt(), 0.15f);
-            Add("Road", MeshKit.Ribbon(d.N, i =>
+            AddRibbon("Road", d.N, i =>
             {
                 var p = d.P[i];
                 return (p.pos - p.right * W, p.pos + p.right * W, 0, 1, i * d.Step / 16f);
-            }), road);
+            }, road);
 
             // Canaletas en el interior de las horquillas
             var grate = MaterialFactory.Lit(Color.white, ProceduralTextures.Grate(), 0.05f);
@@ -66,16 +81,16 @@ namespace Kurogane.Track
             var rail = MaterialFactory.Lit(Color.white, ProceduralTextures.GuardRail(), 0.5f);
             foreach (int s in new[] { -1, 1 })
             {
-                Add("Shoulder", SideStrip(s, 0, 1, 1, 3), gravel);
-                Add("Wall", SideStrip(s, 1, 2, 3, 6), wall);
-                Add("Slope", SideStrip(s, 2, 3, 6, 6), grass);
+                AddRibbon("Shoulder", d.N, SideStrip(s, 0, 1, 1, 3), gravel);
+                AddRibbon("Wall", d.N, SideStrip(s, 1, 2, 3, 6), wall);
+                AddRibbon("Slope", d.N, SideStrip(s, 2, 3, 6, 6), grass);
                 int side = s;
-                Add("GuardRail", MeshKit.Ribbon(d.N, i =>
+                AddRibbon("GuardRail", d.N, i =>
                 {
                     var p = d.P[i];
                     var b = p.pos + p.right * (W + 0.45f) * side;
                     return (b + Vector3.up * 0.45f, b + Vector3.up * 0.82f, 0, 1, 0);
-                }, i => d.HasRail(i, side), true), rail);
+                }, rail, i => d.HasRail(i, side), true);
             }
 
             BuildPosts();
@@ -86,11 +101,11 @@ namespace Kurogane.Track
             BuildBanner(d.N - 4, new Color(0.11f, 0.16f, 0.5f));
         }
 
-        Mesh SideStrip(int s, int ra, int rb, float uScale, float vScale)
+        System.Func<int, (Vector3, Vector3, float, float, float)> SideStrip(int s, int ra, int rb, float uScale, float vScale)
         {
             var d = Data;
             var rows = new Vector2[4];
-            return MeshKit.Ribbon(d.N, i =>
+            return i =>
             {
                 d.Rows(i, s, rows);
                 Vector2 A = rows[ra], B = rows[rb];
@@ -98,7 +113,27 @@ namespace Kurogane.Track
                 var pb = d.At(i, s, B.x, B.y);
                 float w = (B.x - A.x) / uScale, v = i * d.Step / vScale;
                 return s > 0 ? (pa, pb, 0f, w, v) : (pb, pa, w, 0f, v);
-            });
+            };
+        }
+
+        /// <summary>
+        /// Cinta a lo largo de la pista partida en tramos de <see cref="chunkPoints"/> puntos que comparten el punto
+        /// de unión: cada tramo tiene sus propios límites, así Unity descarta los que quedan fuera de cámara.
+        /// </summary>
+        void AddRibbon(string name, int count, System.Func<int, (Vector3, Vector3, float, float, float)> row, Material mat,
+            System.Func<int, bool> keep = null, bool doubleSided = false)
+        {
+            for (int start = 0; start < count - 1; start += chunkPoints)
+            {
+                int a = start, n = Mathf.Min(chunkPoints, count - 1 - start) + 1;
+                if (keep != null)
+                {
+                    bool any = false;
+                    for (int i = a; i < a + n - 1 && !any; i++) any = keep(i) && keep(i + 1);
+                    if (!any) continue;
+                }
+                Add(name, MeshKit.Ribbon(n, j => row(a + j), keep == null ? null : (System.Func<int, bool>)(j => keep(a + j)), doubleSided), mat);
+            }
         }
 
         GameObject Add(string name, Mesh mesh, Material mat, Transform parent = null)
@@ -112,10 +147,27 @@ namespace Kurogane.Track
             return go;
         }
 
-        void AddCombined(string name, Mesh mesh, List<Matrix4x4> matrices, Material mat)
+        /// <summary>
+        /// Combina copias de una malla agrupándolas por celdas de <see cref="cellSize"/> metros, para que cada grupo
+        /// se pueda descartar por separado. Con <paramref name="cullDistance"/> &gt; 0 el grupo se apaga de lejos.
+        /// </summary>
+        void AddCombined(string name, Mesh mesh, List<Matrix4x4> matrices, Material mat, float cullDistance = 0)
         {
             if (matrices.Count == 0) return;
-            foreach (var m in MeshKit.Combine(mesh, matrices)) Add(name, m, mat);
+            var cells = new Dictionary<Vector2Int, List<Matrix4x4>>();
+            foreach (var m in matrices)
+            {
+                Vector3 p = m.GetColumn(3);
+                var key = new Vector2Int(Mathf.FloorToInt(p.x / cellSize), Mathf.FloorToInt(p.z / cellSize));
+                if (!cells.TryGetValue(key, out var list)) cells[key] = list = new List<Matrix4x4>();
+                list.Add(m);
+            }
+            foreach (var cell in cells.Values)
+                foreach (var m in MeshKit.Combine(mesh, cell))
+                {
+                    var go = Add(name, m, mat);
+                    if (cullDistance > 0) culling.Add(go.GetComponent<MeshRenderer>(), cullDistance);
+                }
         }
 
         static Mesh Primitive(PrimitiveType t)
@@ -146,9 +198,9 @@ namespace Kurogane.Track
                 if (i % 5 == 0 && !d.InTunnel(i))
                     catEyes.Add(Matrix4x4.TRS(p.pos + Vector3.up * 0.02f, Quaternion.Euler(0, p.heading * Mathf.Rad2Deg, 0), new Vector3(0.16f, 0.04f, 0.12f)));
             }
-            AddCombined("Posts", cube, posts, MaterialFactory.Lit(new Color(0.49f, 0.51f, 0.55f)));
-            AddCombined("Reflectors", cube, reflectors, MaterialFactory.Unlit(new Color(1f, 0.63f, 0.23f)));
-            AddCombined("CatEyes", cube, catEyes, MaterialFactory.Unlit(new Color(1f, 0.82f, 0.48f)));
+            AddCombined("Posts", cube, posts, MaterialFactory.Lit(new Color(0.49f, 0.51f, 0.55f)), detailDistance);
+            AddCombined("Reflectors", cube, reflectors, MaterialFactory.Unlit(new Color(1f, 0.63f, 0.23f)), detailDistance);
+            AddCombined("CatEyes", cube, catEyes, MaterialFactory.Unlit(new Color(1f, 0.82f, 0.48f)), detailDistance);
         }
 
         void BuildLamps()
@@ -182,6 +234,7 @@ namespace Kurogane.Track
                     l.range = 16;
                     l.intensity = 2.2f;
                     l.shadows = LightShadows.None;
+                    culling.Add(l, lightDistance);
                 }
             }
             var metal = MaterialFactory.Lit(new Color(0.29f, 0.31f, 0.36f));
@@ -222,6 +275,8 @@ namespace Kurogane.Track
                     l.color = new Color(1f, 0.63f, 0.25f);
                     l.range = 20;
                     l.intensity = 2.5f;
+                    l.shadows = LightShadows.None;
+                    culling.Add(l, lightDistance);
                 }
             }
             AddCombined("TunnelLamps", cube, lamps, MaterialFactory.Emissive(new Color(1f, 0.75f, 0.44f), new Color(3f, 1.8f, 0.6f)));

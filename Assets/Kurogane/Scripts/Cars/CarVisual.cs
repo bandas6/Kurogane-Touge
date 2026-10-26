@@ -19,7 +19,7 @@ namespace Kurogane.Cars
         public void Build(CarSpec spec)
         {
             if (Rig != null && builtFor == spec) return;
-            if (Rig != null) Destroy(Rig.root.gameObject);
+            if (Rig != null) Release(Rig);
             Rig = CarModelBuilder.Build(transform, spec, headlights);
             builtFor = spec;
             player = GetComponent<CarController>();
@@ -31,6 +31,24 @@ namespace Kurogane.Cars
                 player.Upshift += OnUpshift;
                 player.LiftOff += OnLiftOff;
             }
+        }
+
+        /// <summary>
+        /// Destruye el modelo junto con las mallas y materiales que se crearon para él; si no, cambiar de coche en
+        /// el garaje dejaría memoria perdida. Las mallas de las primitivas de Unity no están en la lista.
+        /// </summary>
+        static void Release(CarRig rig)
+        {
+            foreach (var m in rig.ownedMeshes) if (m != null) Destroy(m);
+            foreach (var m in rig.ownedMaterials) if (m != null) Destroy(m);
+            rig.ownedMeshes.Clear();
+            rig.ownedMaterials.Clear();
+            if (rig.root != null) Destroy(rig.root.gameObject);
+        }
+
+        void OnDestroy()
+        {
+            if (Rig != null) Release(Rig);
         }
 
         void OnUpshift() => flameTimer = 0.09f;

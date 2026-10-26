@@ -105,7 +105,9 @@ namespace Kurogane.Retro
                 return false;
             }
             Release();
-            var hdr = SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR) ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default;
+            // En móvil, texturas de 8 bits: la mitad de memoria y ancho de banda que en HDR, y el brillo funciona igual
+            var hdr = !Application.isMobilePlatform && SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.DefaultHDR)
+                ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default;
             frame = Create(w, h, 24, hdr);
             history = Create(w, h, 0, hdr);
             historyNext = Create(w, h, 0, hdr);

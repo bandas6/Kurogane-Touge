@@ -12,7 +12,7 @@ namespace Kurogane.Hud
     [RequireComponent(typeof(RaceManager))]
     public class MenuView : MonoBehaviour
     {
-        const int MaxRows = 10;
+        const int MaxRows = 12;
         const float RowH = 40, PanelW = 600;
 
         RaceManager race;

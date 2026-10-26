@@ -14,6 +14,9 @@ namespace Kurogane.Cars
         public Light headlight;
         public GameObject flame;
         public float wheelBase;
+        /// <summary>Mallas y materiales creados para este coche; se destruyen al cambiar de coche.</summary>
+        public readonly List<Mesh> ownedMeshes = new List<Mesh>();
+        public readonly List<Material> ownedMaterials = new List<Material>();
     }
 
     /// <summary>
@@ -104,13 +107,13 @@ namespace Kurogane.Cars
             float rearTop = md.top[md.top.Length - 2].y;
 
             // Carrocería
-            AddMesh(rig.body, "Shell", MeshKit.Extrude(BodyOutline(md), 1.64f), paint);
+            AddMesh(rig, "Shell", MeshKit.Extrude(BodyOutline(md), 1.64f), paint);
             // Franja inferior bicolor / faldones, partida alrededor de los pasos de rueda
             var bandSpans = new[] { md.rear + 0.02f, -md.wb - AR - 0.02f, -md.wb + AR + 0.02f, md.wb - AR - 0.02f, md.wb + AR + 0.02f, md.front - 0.02f };
             for (int b = 0; b < bandSpans.Length; b += 2)
-                AddMesh(rig.body, "Band", MeshKit.Extrude(Quad(bandSpans[b], bandSpans[b + 1], YB, md.cap), 1.68f), band);
+                AddMesh(rig, "Band", MeshKit.Extrude(Quad(bandSpans[b], bandSpans[b + 1], YB, md.cap), 1.68f), band);
             // Habitáculo de cristal y techo
-            AddMesh(rig.body, "Glass", MeshKit.Extrude(new List<Vector2>(md.gh), 1.4f), glass);
+            AddMesh(rig, "Glass", MeshKit.Extrude(new List<Vector2>(md.gh), 1.4f), glass);
             float rz0 = md.gh[1].x, rz1 = md.gh[2].x, ry = Mathf.Max(md.gh[1].y, md.gh[2].y);
             Box(rig.body, paint, new Vector3(0, ry + 0.03f, (rz0 + rz1) / 2), new Vector3(1.42f, 0.05f, rz0 - rz1 + 0.1f));
             foreach (int sx in new[] { -1, 1 })
@@ -243,6 +246,15 @@ namespace Kurogane.Cars
                 l.shadows = LightShadows.None;
                 rig.headlight = l;
             }
+
+            // Una malla por material en la carrocería y en cada rueda: de ~45 dibujos por coche a ~20
+            MeshKit.MergeByMaterial(rig.body, rig.ownedMeshes);
+            foreach (var spin in rig.wheelSpin) MeshKit.MergeByMaterial(spin, rig.ownedMeshes);
+            // Todos los materiales del coche se crean aquí con MaterialFactory
+            var mats = new HashSet<Material>();
+            foreach (var mr in rig.root.GetComponentsInChildren<MeshRenderer>(true))
+                foreach (var m in mr.sharedMaterials) if (m != null) mats.Add(m);
+            rig.ownedMaterials.AddRange(mats);
             return rig;
         }
 
@@ -253,10 +265,11 @@ namespace Kurogane.Cars
             if (Application.isPlaying) Object.Destroy(c); else Object.DestroyImmediate(c);
         }
 
-        static void AddMesh(Transform parent, string name, Mesh mesh, Material mat)
+        static void AddMesh(CarRig rig, string name, Mesh mesh, Material mat)
         {
+            rig.ownedMeshes.Add(mesh);
             var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
+            go.transform.SetParent(rig.body, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;
         }
