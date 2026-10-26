@@ -41,7 +41,7 @@ Los materiales generados por código detectan solos si URP está activo.
 | Otra bajada / cambiar coche / menú (al terminar) | Enter / Tab / Esc | A / Select / Start |
 | Moverse por los menús | ↑ ↓ ← → / W A S D, Enter, Esc | Cruceta, A, Start |
 
-Al pulsar Play aparece el **garaje**: la cámara gira alrededor del coche (arrástrala con el ratón o el dedo) y a la izquierda está el menú. La página principal elige coche, modo (Batalla o Contrarreloj), dificultad del rival y caja (automática o manual). **Opciones** abre la segunda página: unidades de velocidad, filtro PS2, volúmenes de sonido y música, controles táctiles y, en PC, resolución, pantalla completa o ventana, VSync y calidad. Lo elegido se guarda entre sesiones. Para saltarte el menú, desactiva **RaceManager → Show Menu On Start** y se usan los valores del inspector.
+Al pulsar Play aparece el **garaje**: la cámara gira alrededor del coche (arrástrala con el ratón o el dedo) y a la izquierda está el menú. La página principal elige coche, modo (Batalla o Contrarreloj), dificultad del rival y caja (automática o manual). **Opciones** abre la segunda página: unidades de velocidad, filtro PS2, volúmenes de sonido y música, controles táctiles, un contador de FPS y, en PC, resolución, pantalla completa o ventana, VSync y calidad. Lo elegido se guarda entre sesiones. Para saltarte el menú, desactiva **RaceManager → Show Menu On Start** y se usan los valores del inspector.
 
 Toda la interfaz es uGUI generada por código (`Kurogane.Hud`) y funciona con teclado, mando, ratón y pantalla táctil.
 
@@ -71,6 +71,16 @@ Al llegar a meta la bajada recibe una nota sobre 100:
 
 Si la escena se creó antes de la Fase 4, ejecuta otra vez **Kurogane → Crear escena de prueba** para añadir el filtro, el sonido y la música.
 
+### Rendimiento
+
+- La pista se construye en tramos de 80 m, y los árboles, postes y faroles se agrupan en celdas de 60 m, para que Unity descarte lo que no está en cámara.
+- La cámara no dibuja más allá del final de la niebla (unos 270 m).
+- Postes, catadióptricos, ojos de gato y las luces de faroles y túnel se apagan por distancia (`DetailCulling` en la pista; distancias en **TrackBuilder → Rendimiento**).
+- Cada coche fusiona sus piezas en una malla por material, y al cambiar de coche se liberan sus mallas y materiales.
+- El HUD solo rehace un texto cuando cambia el número que muestra.
+- En Android: 60 fps fijos, *frame pacing* activado, sin HDR en el perfil de URP para móvil y filtro PS2 con texturas de 8 bits.
+- **Opciones → Ver FPS** muestra los fps y los milisegundos por cuadro. Para medir en un móvil, haz una build de desarrollo y usa también el Profiler de Unity conectado al dispositivo.
+
 ## Estructura
 
 ```
@@ -83,7 +93,7 @@ Assets/Kurogane/
               RaceManager.Menu (menú, opciones, pausa, nota final), RaceSettings (opciones guardadas)
     Hud/      HudView (HUD y caja de cambios), MenuView (menús, pausa, resultados), TouchControls, UiKit
     Controls/ DriverInput (teclado, mando y táctil)
-    Core/     MaterialFactory, ProceduralTextures, MeshKit
+    Core/     MaterialFactory, ProceduralTextures, MeshKit, DetailCulling
     Retro/    PS2Filter (imagen a baja resolución, estela, brillo, tramado, 16 bits)
     Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer
   Shaders/    PS2Filter.shader
@@ -104,8 +114,8 @@ La física, el rival y el cálculo de la pista son un port directo del prototipo
 | 2 | Pulido del juego: menú de coche y opciones, caja manual en pantalla, nota final S–C | ✅ |
 | 3 | Arte: coches modelados en Blender, texturas a mano, público, señales, lightmaps, mallas horneadas | ⏳ |
 | 4 | Filtro PS2 (estela entre cuadros, brillo, tramado, color de 16 bits) y audio (motor por coche, turbo, eurobeat) | ✅ (la música la pones tú) |
-| 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | 🧪 en prueba |
-| 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | ⏳ |
+| 5 | Interfaz definitiva, menú garaje 3D, controles táctiles, opciones de PC | ✅ |
+| 6 | Optimización: 60 fps en Android de gama media, LOD, instancing | 🧪 en prueba (falta medir en un Android real) |
 | 7 | Compilaciones: AAB firmado para Google Play y Windows x64 | ⏳ |
 
 ## Antes de compilar para Android o PC

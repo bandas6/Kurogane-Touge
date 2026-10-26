@@ -20,7 +20,7 @@ namespace Kurogane.Race
     public enum MenuRow
     {
         Coche, Modo, Rival, Caja, Opciones, Empezar,
-        Velocidad, Filtro, Sonido, Musica, Tactil, Resolucion, Pantalla, Vsync, Calidad, Volver
+        Velocidad, Filtro, Sonido, Musica, Tactil, Resolucion, Pantalla, Vsync, Calidad, Fps, Volver
     }
 
     public enum TouchMode { Auto, Si, No }
@@ -40,16 +40,18 @@ namespace Kurogane.Race
         public FullScreenMode screenMode = FullScreenMode.FullScreenWindow;
         [Tooltip("Resolución elegida en el menú; (0, 0) deja la actual.")]
         public Vector2Int resolution;
+        [Tooltip("Muestra los fps y el tiempo por cuadro en el HUD, para medir el rendimiento.")]
+        public bool showFps;
 
         static readonly MenuRow[] RacePage = { MenuRow.Coche, MenuRow.Modo, MenuRow.Rival, MenuRow.Caja, MenuRow.Opciones, MenuRow.Empezar };
         static readonly MenuRow[] OptionsPageDesktop =
         {
             MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil,
-            MenuRow.Resolucion, MenuRow.Pantalla, MenuRow.Vsync, MenuRow.Calidad, MenuRow.Volver
+            MenuRow.Resolucion, MenuRow.Pantalla, MenuRow.Vsync, MenuRow.Calidad, MenuRow.Fps, MenuRow.Volver
         };
         static readonly MenuRow[] OptionsPageMobile =
         {
-            MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil, MenuRow.Calidad, MenuRow.Volver
+            MenuRow.Velocidad, MenuRow.Filtro, MenuRow.Sonido, MenuRow.Musica, MenuRow.Tactil, MenuRow.Calidad, MenuRow.Fps, MenuRow.Volver
         };
         public static readonly string[] PauseLabels = { "Continuar", "Reiniciar bajada", "Menú principal" };
         static readonly string[] SkillNames = { "Fácil", "Normal", "Leyenda" };
@@ -202,6 +204,7 @@ namespace Kurogane.Race
                     qualityLevel = ((qualityLevel < 0 ? QualitySettings.GetQualityLevel() : qualityLevel) + dir + n) % n;
                     ApplyDisplay(false);
                     break;
+                case MenuRow.Fps: showFps = !showFps; break;
                 default: return;
             }
             ApplyOptions();
@@ -232,6 +235,7 @@ namespace Kurogane.Race
                 case MenuRow.Tactil: return "Táctil";
                 case MenuRow.Resolucion: return "Resolución";
                 case MenuRow.Vsync: return "VSync";
+                case MenuRow.Fps: return "Ver FPS";
                 default: return row.ToString();
             }
         }
@@ -258,6 +262,7 @@ namespace Kurogane.Race
                     var names = QualitySettings.names;
                     int q = qualityLevel < 0 ? QualitySettings.GetQualityLevel() : qualityLevel;
                     return q >= 0 && q < names.Length ? names[q] : "—";
+                case MenuRow.Fps: return showFps ? "Sí" : "No";
                 default: return "";
             }
         }

@@ -10,7 +10,7 @@ namespace Kurogane.Race
             Manual = "kurogane.cajaManual", Mph = "kurogane.mph", Retro = "kurogane.filtroPS2",
             Sound = "kurogane.volumenSonido", Music = "kurogane.volumenMusica", Touch = "kurogane.tactil",
             Vsync = "kurogane.vsync", Quality = "kurogane.calidad", ScreenKey = "kurogane.pantalla",
-            ResW = "kurogane.resAncho", ResH = "kurogane.resAlto";
+            ResW = "kurogane.resAncho", ResH = "kurogane.resAlto", Fps = "kurogane.verFps";
 
         public static void Load(RaceManager r)
         {
@@ -29,6 +29,7 @@ namespace Kurogane.Race
             r.screenMode = PlayerPrefs.GetInt(ScreenKey, (int)r.screenMode) == (int)FullScreenMode.Windowed
                 ? FullScreenMode.Windowed : FullScreenMode.FullScreenWindow;
             r.resolution = new Vector2Int(PlayerPrefs.GetInt(ResW, r.resolution.x), PlayerPrefs.GetInt(ResH, r.resolution.y));
+            r.showFps = PlayerPrefs.GetInt(Fps, r.showFps ? 1 : 0) == 1;
         }
 
         public static void Save(RaceManager r)
@@ -47,6 +48,7 @@ namespace Kurogane.Race
             PlayerPrefs.SetInt(ScreenKey, (int)r.screenMode);
             PlayerPrefs.SetInt(ResW, r.resolution.x);
             PlayerPrefs.SetInt(ResH, r.resolution.y);
+            PlayerPrefs.SetInt(Fps, r.showFps ? 1 : 0);
             PlayerPrefs.Save();
         }
     }

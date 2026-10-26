@@ -24,7 +24,13 @@ namespace Kurogane.CameraRig
         /// <summary>Gira la cámara del garaje (arrastre del ratón o del dedo, en píxeles).</summary>
         public void Orbit(float pixels) => orbitAngle += pixels * 0.006f;
 
-        void Awake() => cam = GetComponent<Camera>();
+        void Awake()
+        {
+            cam = GetComponent<Camera>();
+            // Más allá del final de la niebla lineal todo es del color del fondo: no hace falta dibujarlo
+            if (RenderSettings.fog && RenderSettings.fogMode == FogMode.Linear)
+                cam.farClipPlane = Mathf.Min(cam.farClipPlane, RenderSettings.fogEndDistance + 30);
+        }
 
         public void Snap()
         {

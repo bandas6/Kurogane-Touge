@@ -19,11 +19,34 @@ namespace Kurogane.Hud
 
         RaceManager race;
         RectTransform root, waterGroup, gearbox, shiftRow;
-        Text time, record, split, position, waterText, goal, flags, chain, big, toast, speed, gear, gearMode, rpm;
+        Text time, record, split, position, waterText, goal, flags, chain, big, toast, speed, gear, gearMode, rpm, fps;
+        float fpsTimer, fpsTime;
+        int fpsFrames;
         Image waterFill, gearBg, shiftUpBg;
         readonly Image[] segments = new Image[Segments];
         int shownGear = -1;
         float gearChangedAt = -10;
+
+        // Último valor mostrado de cada texto: solo se formatea una cadena nueva cuando cambia (menos basura en móvil)
+        int keyTime = -1, keyGoal = -1, keyWater = -1, keyFlags = -1, keySpeed = -1, keyRpm = -1, keyChain = -1;
+        float keyBest = -1;
+        bool keyMph, keyShift;
+        static readonly string[] GearNames = { "1", "2", "3", "4", "5", "6", "7", "8" };
+        static readonly string[] FlagTexts = BuildFlagTexts();
+
+        static string[] BuildFlagTexts()
+        {
+            var r = new string[8];
+            for (int m = 0; m < 8; m++)
+            {
+                string f = "";
+                if ((m & 1) != 0) f += "REBUFO   ";
+                if ((m & 2) != 0) f += "溝 MIZO   ";
+                if ((m & 4) != 0) f += "LÍMITE RPM";
+                r[m] = f.Trim();
+            }
+            return r;
+        }
 
         void Start()
         {
@@ -48,6 +71,9 @@ namespace Kurogane.Hud
 
             goal = UiKit.Label("Meta", root, 18, TextAnchor.UpperRight);
             goal.rectTransform.Place(new Vector2(1, 1), new Vector2(-24, -16), new Vector2(300, 24));
+            // Arriba al centro, debajo de los botones táctiles, para no tapar la caja de cambios
+            fps = UiKit.Label("FPS", root, 16, TextAnchor.UpperCenter);
+            fps.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -80), new Vector2(300, 22));
 
             // Vaso de agua
             waterGroup = UiKit.Node("Vaso", root);
@@ -122,40 +148,74 @@ namespace Kurogane.Hud
                 new Vector2(360, player.manualGearbox ? 150 : 110));
             waterGroup.Place(touch ? new Vector2(0, 1) : Vector2.zero, touch ? new Vector2(24, -210) : new Vector2(24, 24), new Vector2(240, 60));
 
-            time.Set(RaceManager.Fmt(race.RaceTime));
-            record.Set("Récord " + RaceManager.Fmt(race.BestTime));
+            int k = Mathf.FloorToInt(race.RaceTime * 100);
+            if (k != keyTime) { keyTime = k; time.Set(RaceManager.Fmt(race.RaceTime)); }
+            if (race.BestTime != keyBest) { keyBest = race.BestTime; record.Set("Récord " + RaceManager.Fmt(race.BestTime)); }
             split.Set(race.SplitText ?? "");
             position.Set(race.HasRival ? (race.PlayerAhead ? "1º" : "2º") : "");
-            goal.Set($"{race.MetersToGoal / 1000f:0.00} km a meta");
+            k = Mathf.RoundToInt(race.MetersToGoal / 10);
+            if (k != keyGoal) { keyGoal = k; goal.Set($"{k / 100f:0.00} km a meta"); }
 
-            waterText.Set($"Vaso {Mathf.RoundToInt(race.Water)}%");
-            waterFill.rectTransform.sizeDelta = new Vector2(220 * Mathf.Clamp01(race.Water / 100), 14);
+            k = Mathf.RoundToInt(race.Water);
+            if (k != keyWater)
+            {
+                keyWater = k;
+                waterText.Set($"Vaso {k}%");
+                waterFill.rectTransform.sizeDelta = new Vector2(220 * Mathf.Clamp01(k / 100f), 14);
+            }
 
-            string f = "";
-            if (player.Slipstream) f += "REBUFO   ";
-            if (player.InGutter) f += "溝 MIZO   ";
-            if (player.RevLimiter) f += "LÍMITE RPM";
-            flags.Set(f.Trim());
+            k = (player.Slipstream ? 1 : 0) | (player.InGutter ? 2 : 0) | (player.RevLimiter ? 4 : 0);
+            if (k != keyFlags) { keyFlags = k; flags.Set(FlagTexts[k]); }
 
-            chain.Set(race.Chain > 5
-                ? $"{RaceManager.Tier(race.Chain * race.Multiplier)}  {Mathf.RoundToInt(race.Chain)}  x{race.Multiplier}  ({Mathf.RoundToInt(Mathf.Abs(player.Slip) * Mathf.Rad2Deg)}°)"
-                : "");
+            if (race.Chain > 5)
+            {
+                int deg = Mathf.RoundToInt(Mathf.Abs(player.Slip) * Mathf.Rad2Deg), pts = Mathf.RoundToInt(race.Chain);
+                k = pts * 1000 + race.Multiplier * 100 + deg;
+                if (k != keyChain)
+                {
+                    keyChain = k;
+                    chain.Set($"{RaceManager.Tier(race.Chain * race.Multiplier)}  {pts}  x{race.Multiplier}  ({deg}°)");
+                }
+            }
+            else if (keyChain != -1) { keyChain = -1; chain.Set(""); }
             big.Set(race.BigMessage ?? "");
             toast.Set(race.Toast ?? "");
 
             UpdateGearbox(player);
+            UpdateFps();
+        }
+
+        /// <summary>Media de fps y milisegundos por cuadro cada medio segundo (opción "Ver FPS").</summary>
+        void UpdateFps()
+        {
+            fps.Show(race.showFps);
+            if (!race.showFps) return;
+            fpsFrames++;
+            fpsTime += Time.unscaledDeltaTime;
+            fpsTimer -= Time.unscaledDeltaTime;
+            if (fpsTimer > 0) return;
+            float ms = fpsTime / Mathf.Max(1, fpsFrames) * 1000;
+            fps.Set($"{Mathf.RoundToInt(1000 / Mathf.Max(0.01f, ms))} fps · {ms:0.0} ms");
+            fpsTimer = 0.5f;
+            fpsTime = 0;
+            fpsFrames = 0;
         }
 
         void UpdateGearbox(Kurogane.Cars.CarController player)
         {
-            float v = player.Speed * (race.useMph ? 2.237f : 3.6f);
-            speed.Set($"{Mathf.RoundToInt(v)} {(race.useMph ? "mph" : "km/h")}");
+            int v = Mathf.RoundToInt(player.Speed * (race.useMph ? 2.237f : 3.6f));
+            if (v != keySpeed || race.useMph != keyMph)
+            {
+                keySpeed = v;
+                keyMph = race.useMph;
+                speed.Set($"{v} {(race.useMph ? "mph" : "km/h")}");
+            }
 
             if (player.Gear != shownGear) { shownGear = player.Gear; gearChangedAt = Time.time; }
             bool shiftLight = player.Rpm >= ShiftRpm && player.Gear < player.spec.Gears - 1;
             bool blink = Time.unscaledTime % 0.2f < 0.1f;
             gearBg.color = shiftLight && blink ? UiKit.Red : Time.time - gearChangedAt < 0.25f ? UiKit.Amber : UiKit.Faint;
-            gear.Set((player.Gear + 1).ToString());
+            gear.Set(player.Gear < GearNames.Length ? GearNames[player.Gear] : (player.Gear + 1).ToString());
             gearMode.Set(player.manualGearbox ? "MT" : "AT");
 
             // Cuentavueltas: blanco, ámbar desde 6.500 y rojo en la zona de cambio
@@ -166,7 +226,14 @@ namespace Kurogane.Hud
                 if (player.Rpm < at - 250) c.a = 0.18f;
                 segments[i].color = c;
             }
-            rpm.Set($"{Mathf.RoundToInt(player.Rpm)} rpm{(shiftLight && player.manualGearbox ? "   ▲ CAMBIA" : "")}");
+            int r = Mathf.RoundToInt(player.Rpm / 10) * 10;
+            bool shiftHint = shiftLight && player.manualGearbox;
+            if (r != keyRpm || shiftHint != keyShift)
+            {
+                keyRpm = r;
+                keyShift = shiftHint;
+                rpm.Set($"{r} rpm{(shiftHint ? "   ▲ CAMBIA" : "")}");
+            }
 
             shiftRow.Show(player.manualGearbox);
             shiftUpBg.color = shiftLight ? UiKit.Red : UiKit.Faint;
