@@ -17,6 +17,8 @@ namespace Kurogane.Track
         public TrackDefinition definition;
         [Tooltip("La geometría ya está horneada en la escena (Kurogane > Hornear pista): al arrancar solo se calcula la pista.")]
         public bool baked;
+        [Tooltip("Paleta, densidad y semilla del pueblo de la meta. Vacío = valores por defecto.")]
+        public Kurogane.City.CityStyle cityStyle;
         [Tooltip("Semilla para la posición de árboles.")]
         public int seed = 86;
         [Range(0, 1200)] public int treeCount = 760;
@@ -118,9 +120,10 @@ namespace Kurogane.Track
             BuildTunnel();
             BuildForest();
             BuildBanner(8, new Color(0.72f, 0.07f, 0.16f));
-            BuildBanner(d.N - 4, new Color(0.11f, 0.16f, 0.5f));
+            BuildBanner(d.FinishIndex + 1, new Color(0.11f, 0.16f, 0.5f));
             BuildSigns();
             BuildCrowd();
+            if (d.TownStart < d.N) new Kurogane.City.CityBuilder(this, cityStyle).Build();
         }
 
         /// <summary>Vuelve a generar la geometría desde cero (lo usa el horneado en el editor).</summary>
@@ -143,6 +146,7 @@ namespace Kurogane.Track
                 {
                     case "Posts": case "Reflectors": case "CatEyes": case "Chevrons": case "WarningSigns":
                     case "SpeedSigns": case "SignBacks": case "SignPoles": case "KmPost":
+                    case Kurogane.City.CityBuilder.DetailName: case "Rotulo": case "Ambar": case "LuzPasoNivel":
                         culling.Add(mr, detailDistance);
                         break;
                     case "Crowd":
@@ -192,7 +196,10 @@ namespace Kurogane.Track
             }
         }
 
-        GameObject Add(string name, Mesh mesh, Material mat, Transform parent = null)
+        /// <summary>Descarte por distancia de la pista (lo usa también el pueblo).</summary>
+        internal DetailCulling Culling => culling;
+
+        internal GameObject Add(string name, Mesh mesh, Material mat, Transform parent = null)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent != null ? parent : root, false);
@@ -251,7 +258,7 @@ namespace Kurogane.Track
                     posts.Add(Matrix4x4.TRS(b + Vector3.up * 0.42f, Quaternion.identity, new Vector3(0.12f, 0.85f, 0.12f)));
                     if (i % 8 == 0) reflectors.Add(Matrix4x4.TRS(b + Vector3.up * 1.0f, Quaternion.identity, new Vector3(0.1f, 0.14f, 0.06f)));
                 }
-                if (i % 5 == 0 && !d.InTunnel(i))
+                if (i % 5 == 0 && !d.InTunnel(i) && i < d.TownStart)
                     catEyes.Add(Matrix4x4.TRS(p.pos + Vector3.up * 0.02f, Quaternion.Euler(0, p.heading * Mathf.Rad2Deg, 0), new Vector3(0.16f, 0.04f, 0.12f)));
             }
             AddCombined("Posts", cube, posts, MaterialFactory.Lit(new Color(0.49f, 0.51f, 0.55f)), detailDistance);
@@ -271,6 +278,7 @@ namespace Kurogane.Track
             for (int i = 12; i < d.N; i += 26, n++)
             {
                 if (d.InTunnel(i) || Mathf.Abs(i - d.TunnelStart) < 10 || Mathf.Abs(i - d.TunnelEnd) < 10) continue;
+                if (i >= d.TownStart - 6) continue; // el pueblo tiene sus propios faroles en los postes
                 var p = d.P[i];
                 float a = d.WallHeight(i, 1), b = d.WallHeight(i, -1);
                 int s = a < b ? 1 : b < a ? -1 : (n % 2 == 1 ? 1 : -1);
@@ -375,7 +383,7 @@ namespace Kurogane.Track
             while (placed < treeCount && tries++ < treeCount * 6)
             {
                 int i = rng.Next(d.N), s = rng.Next(2) == 0 ? -1 : 1;
-                if (Mathf.Abs(i - d.TunnelStart) < 4 || d.InTunnel(i)) continue;
+                if (Mathf.Abs(i - d.TunnelStart) < 4 || d.InTunnel(i) || i >= d.TownStart - 8) continue;
                 d.Rows(i, s, rows);
                 if (rows[3].x - rows[2].x < 3) continue;
                 float lat = Mathf.Lerp(rows[2].x + 1, rows[3].x - 0.5f, (float)rng.NextDouble());

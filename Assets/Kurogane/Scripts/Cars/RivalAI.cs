@@ -32,6 +32,10 @@ namespace Kurogane.Cars
 
         static float SkillFactor(RivalSkill s) => s == RivalSkill.Facil ? 0.83f : s == RivalSkill.Normal ? 0.92f : 1.0f;
 
+        /// <summary>Carril donde aparca tras la meta (derecha), lejos del carril izquierdo por el que llega el jugador.</summary>
+        const float ParkLane = 3.6f;
+        float park;
+
         public void Init(TrackData track, CarSpec carSpec, float startDistance)
         {
             Track = track;
@@ -41,6 +45,7 @@ namespace Kurogane.Cars
             Finished = false;
             FinishTime = float.PositiveInfinity;
             YawOffset = 0;
+            park = 0;
             Place();
         }
 
@@ -60,18 +65,22 @@ namespace Kurogane.Cars
                     if (gap > 90) sk -= 0.07f;
                     else if (gap < -10) sk += 0.05f;
                 }
-                float target = Finished ? 0 : Mathf.Min(spec.gearTopSpeed[spec.Gears - 1] * 0.97f,
-                    Track.VMax[Mathf.Min(Track.N - 1, i + 3)] * sk * (spec.grip > 9 ? 1.03f : 1));
+                // Tras la meta sigue despacio hacia el pueblo y se para a 100 m, apartado a la derecha
+                float target = Finished
+                    ? (Distance < Track.TimedLength + 100 ? Mathf.Min(9, Track.VMax[Mathf.Min(Track.N - 1, i + 3)]) : 0)
+                    : Mathf.Min(spec.gearTopSpeed[spec.Gears - 1] * 0.97f,
+                        Track.VMax[Mathf.Min(Track.N - 1, i + 3)] * sk * (spec.grip > 9 ? 1.03f : 1));
                 float accUp = (Speed < 12 ? 6 : 4.2f) * spec.gearAccel[0] / 10f;
                 Braking = target < Speed - 0.5f;
                 Speed += Mathf.Clamp(target - Speed, -10 * dt, accUp * dt);
                 Distance += Speed * dt;
-                if (Distance >= Track.Length - 6 && !Finished)
+                if (Distance >= Track.TimedLength - 6 && !Finished)
                 {
                     Finished = true;
                     FinishTime = Clock != null ? Clock() : Time.time;
                 }
                 Distance = Mathf.Min(Distance, Track.Length - 4);
+                if (Finished) park = Mathf.MoveTowards(park, 1, dt * 0.5f);
             }
             Place();
         }
@@ -85,6 +94,7 @@ namespace Kurogane.Cars
             var a = d.P[i];
             var b = d.P[Mathf.Min(d.N - 1, i + 1)];
             float lane = Mathf.Lerp(d.Lane[i], d.Lane[Mathf.Min(d.N - 1, i + 1)], f);
+            lane = Mathf.Lerp(lane, ParkLane, park);
             var pos = Vector3.Lerp(a.pos, b.pos, f) + a.right * lane;
             float k = 0;
             for (int j = 0; j < 8; j++) k += d.P[Mathf.Clamp(i + j, 0, d.N - 1)].k;

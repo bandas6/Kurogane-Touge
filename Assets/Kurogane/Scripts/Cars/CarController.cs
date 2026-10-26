@@ -23,6 +23,11 @@ namespace Kurogane.Cars
         public TrackData Track { get; private set; }
         public bool ControlsEnabled { get; set; }
         public bool AutoBrake { get; set; }
+        /// <summary>
+        /// Piloto automático (llegada al pueblo): si no es nulo, da gas, freno y volante en lugar del jugador.
+        /// Necesita ControlsEnabled para que la caja automática siga cambiando.
+        /// </summary>
+        public Func<(float gas, float brake, float steer)> Autopilot { get; set; }
         public float Heading { get; private set; }
         public Vector3 Velocity => new Vector3(vx, 0, vz);
         public float Speed => Mathf.Sqrt(vx * vx + vz * vz);
@@ -104,6 +109,15 @@ namespace Kurogane.Cars
             float brake = ControlsEnabled ? DriverInput.Brake : (AutoBrake ? 0.6f : 0);
             bool hand = ControlsEnabled && DriverInput.Handbrake;
             float steerIn = DriverInput.Steer;
+            if (Autopilot != null)
+            {
+                // Piloto automático: solo cambia de dónde salen los mandos; la física es la misma
+                var a = Autopilot();
+                gas = a.gas;
+                brake = a.brake;
+                steerIn = a.steer;
+                hand = false;
+            }
             GasInput = gas;
             Braking = brake > 0.1f;
 

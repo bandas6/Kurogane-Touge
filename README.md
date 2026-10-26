@@ -75,6 +75,13 @@ Si la escena se creó antes de la Fase 4, ejecuta otra vez **Kurogane → Crear 
 
 `SkyDome` (objeto **Cielo**) dibuja el fondo lejano: cúpula con degradado, unas 800 estrellas, luna con halo, dos anillos de cordilleras, unas 1.800 luces de ciudad en el valle (hacia donde baja la carretera) y bruma baja. Va en un grupo que sigue a la cámara, dentro de una esfera menor que su plano lejano, con un shader sin niebla que se dibuja antes que todo lo demás (`Shaders/Sky.shader`). El horizonte usa el color de la niebla, igual que el fondo de la cámara, para que no se note la unión. Se hornea junto con la pista; las escenas antiguas sin cielo reciben uno al arrancar.
 
+### Pueblo de la meta y llegada
+
+- **La carretera sigue tras la meta** unos 300 m hasta un pueblo (tramos `afterGoal` de `TrackDefinition`; los trazados guardados sin ellos los reciben solos). La meta, los sectores, la pancarta GOAL y la llegada del rival se calculan sobre el tramo cronometrado (`TrackData.FinishIndex` y `TimedLength`), que no cambia: **los récords guardados siguen valiendo**.
+- **Llegada:** al cruzar la meta el coche sigue solo (`CarController.Autopilot`, sin tocar la física) por el carril izquierdo a unos 40 km/h y frena frente a la tienda de tofu, mientras la cámara corta entre tres planos fijos (lateral bajo, picado desde un poste y frontal). Luego salen los resultados. **Confirmar** la salta. El rival sigue despacio y aparca a la derecha.
+- **Pueblo** (`Scripts/City`: `CityBuilder`, `CityStyle`, `CityProps`): calle mayor con aceras, dos transversales, paso a nivel, casas de dos pisos con tejado de kawara, balcones y aire acondicionado, tiendas con persiana y rótulo, konbini iluminado, gasolinera, máquinas expendedoras, cabina, postes eléctricos con cables y farolas, semáforo en ámbar intermitente, arrozales, cedros y la tienda de tofu 豆腐店 黒鉄. Casi todo usa un único material con el atlas del pueblo, se combina por celdas y entra en **Hornear pista** y **Hornear luces**. Los nombres de las tiendas son inventados y se cambian en el asset `Data/PuebloMeta.asset`.
+- **Ciudad del valle:** bloques con ventanas encendidas entre 300 m y 1,5 km, sin niebla; la cámara alarga su plano lejano solo al acercarse a la meta. Más lejos, una silueta de ciudad dentro del `SkyDome`.
+
 ### Ambiente y horneado
 
 - **Señales** (por código, en pixel art): chevrones en el exterior de cada horquilla, aviso de curva cerrada 70 m antes, límite de 40 en la salida y al salir del túnel, postes kilométricos cada 500 m y rótulo sobre la boca del túnel. Brillan un poco, como el retrorreflectante con los faros.
@@ -103,11 +110,13 @@ Assets/Kurogane/
     Cars/     CarSpec, CarController (física arcade), RivalAI, CarModelBuilder, CarVisual
     Camera/   ChaseCamera (persecución y cámara de garaje)
     Race/     RaceManager (cuenta atrás, puntos, vaso, sectores, récords),
-              RaceManager.Menu (menú, opciones, pausa, nota final), RaceSettings (opciones guardadas)
+              RaceManager.Menu (menú, opciones, pausa, nota final), RaceManager.Arrival (llegada al pueblo),
+              RaceSettings (opciones guardadas)
     Hud/      HudView (HUD y caja de cambios), MenuView (menús, pausa, resultados), TouchControls, UiKit
     Controls/ DriverInput (teclado, mando y táctil)
     Core/     MaterialFactory, ProceduralTextures, MeshKit, DetailCulling
     Environment/ SkyDome (cielo, luna, cordilleras y luces del valle; namespace Kurogane.Atmosphere)
+    City/     CityBuilder (pueblo de la meta y ciudad del valle), CityStyle, CityProps (atlas y Blinker)
     Retro/    PS2Filter (imagen a baja resolución, estela, brillo, tramado, 16 bits)
     Sound/    EngineSynth (motor por código), CarAudio, MusicPlayer
   Shaders/    PS2Filter.shader, Sky.shader

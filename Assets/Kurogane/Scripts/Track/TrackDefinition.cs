@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Kurogane.Track
@@ -16,13 +17,16 @@ namespace Kurogane.Track
         public float lengthOrRadius;
         [Tooltip("El tramo va dentro de un túnel (solo rectas).")]
         public bool tunnel;
+        [Tooltip("Tramo después de la meta (bajada al pueblo): no se cronometra.")]
+        public bool afterGoal;
 
-        public TrackSegment(SegmentType type, float angle, float lengthOrRadius, bool tunnel = false)
+        public TrackSegment(SegmentType type, float angle, float lengthOrRadius, bool tunnel = false, bool afterGoal = false)
         {
             this.type = type;
             this.angle = angle;
             this.lengthOrRadius = lengthOrRadius;
             this.tunnel = tunnel;
+            this.afterGoal = afterGoal;
         }
 
         public float Length => type == SegmentType.Hairpin
@@ -45,18 +49,39 @@ namespace Kurogane.Track
         public float slope = 0.055f;
         [Tooltip("Desnivel por metro en horquillas.")]
         public float hairpinSlope = 0.035f;
+        [Tooltip("Desnivel por metro en los tramos tras la meta (bajada suave al pueblo).")]
+        public float afterGoalSlope = 0.03f;
 
         public List<TrackSegment> segments = new List<TrackSegment>(DefaultSegments());
 
         public static IEnumerable<TrackSegment> DefaultSegments()
         {
-            return new[]
+            var timed = new[]
             {
                 S(110), C(50, 70), S(70), C(-70, 80), S(90), C(35, 40), S(120),
                 H(-175, 18), S(110), H(175, 18), S(90), C(-60, 70), C(45, 60), S(150, true),
                 C(90, 90), S(60), C(-30, 40), S(80), H(175, 17), S(100), H(-175, 17), S(130),
                 C(-50, 70), S(60), C(70, 80), S(120), C(-40, 50), S(160)
             };
+            return new List<TrackSegment>(timed).Concat(AfterGoalSegments());
+        }
+
+        /// <summary>Unos 300 m tras la meta hasta el pueblo: curva suave y la calle mayor en dos rectas.</summary>
+        public static IEnumerable<TrackSegment> AfterGoalSegments() => new[]
+        {
+            new TrackSegment(SegmentType.Curve, 25, 60, false, true),
+            new TrackSegment(SegmentType.Straight, 0, 120, false, true),
+            new TrackSegment(SegmentType.Straight, 0, 120, false, true),
+        };
+
+        /// <summary>
+        /// Tramos que se usan para calcular la pista. Los trazados guardados antes del pueblo no tienen tramos
+        /// tras la meta: se añaden los de por defecto, sin tocar el asset ni el tramo cronometrado.
+        /// </summary>
+        public IEnumerable<TrackSegment> AllSegments()
+        {
+            foreach (var s in segments) if (s.afterGoal) return segments;
+            return segments.Concat(AfterGoalSegments());
         }
 
         static TrackSegment S(float len, bool tun = false) => new TrackSegment(SegmentType.Straight, 0, len, tun);

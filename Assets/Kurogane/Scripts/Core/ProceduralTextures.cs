@@ -54,9 +54,9 @@ namespace Kurogane.Core
                 for (int i = 0; i < n; i++) Rect(rng.Next(w), rng.Next(h), sw, sh, cols[i % cols.Length]);
             }
 
-            public Texture2D ToTexture(string name, bool repeat = true)
+            public Texture2D ToTexture(string name, bool repeat = true, bool mips = true)
             {
-                var t = new Texture2D(w, h, TextureFormat.RGBA32, true)
+                var t = new Texture2D(w, h, TextureFormat.RGBA32, mips)
                 {
                     name = name,
                     filterMode = FilterMode.Point,
@@ -64,7 +64,7 @@ namespace Kurogane.Core
                     anisoLevel = 0
                 };
                 t.SetPixels32(px);
-                t.Apply(true);
+                t.Apply(mips);
                 return t;
             }
         }
@@ -190,6 +190,200 @@ namespace Kurogane.Core
             var t = g.ToTexture("PuntoSuave", false);
             t.filterMode = FilterMode.Bilinear;
             return t;
+        }
+
+        // ---------- Pueblo de la meta (bloque B) ----------
+
+        public const int TownCellPx = 16, TownCells = 8;
+
+        /// <summary>Rectángulo UV de una celda del atlas del pueblo, con medio píxel de margen para que no sangre.</summary>
+        public static Rect TownCell(int cell)
+        {
+            int cx = cell % TownCells, cy = cell / TownCells;
+            float size = TownCellPx * TownCells, inset = 0.5f / size;
+            float u0 = cx * TownCellPx / size, v1 = 1 - cy * TownCellPx / size;
+            float s = TownCellPx / size;
+            return new Rect(u0 + inset, v1 - s + inset, s - 2 * inset, s - 2 * inset);
+        }
+
+        /// <summary>
+        /// Atlas del pueblo (8×8 celdas de 16 px): todo el pueblo usa un único material con esta textura y su mapa
+        /// de emisión, donde solo brillan ventanas encendidas, carteles, konbini, máquinas y faroles.
+        /// El orden de las celdas lo da <c>Kurogane.City.TownCell</c>.
+        /// </summary>
+        public static Texture2D TownAtlas(out Texture2D emission)
+        {
+            int n = TownCellPx * TownCells;
+            var g = new Canvas(n, n);
+            var e = new Canvas(n, n);
+            e.Fill(H("#000000"));
+            var r = new System.Random(19);
+
+            void Cell(int c, System.Action<int, int> draw) => draw(c % TownCells * TownCellPx, c / TownCells * TownCellPx);
+            void Plain(int c, string hex, string speck)
+            {
+                Cell(c, (x, y) =>
+                {
+                    g.Rect(x, y, 16, 16, H(hex));
+                    for (int i = 0; i < 26; i++) g.Rect(x + r.Next(16), y + r.Next(16), 1, 1, H(speck));
+                });
+            }
+            void Glow(int c, float k)
+            {
+                Cell(c, (x, y) =>
+                {
+                    for (int j = 0; j < 16; j++)
+                        for (int i = 0; i < 16; i++)
+                        {
+                            var col = (Color)g.Get(x + i, y + j);
+                            e.Set(x + i, y + j, col * k);
+                        }
+                });
+            }
+
+            Plain(0, "#cfc6ae", "#bdb49c");   // pared crema
+            Plain(1, "#dcdcd6", "#c8c8c2");   // pared blanca
+            Plain(2, "#a8927a", "#968068");   // pared beige
+            Plain(3, "#8e9aa6", "#7e8a96");   // pared gris azulado
+            Cell(4, (x, y) =>                  // tablas de madera
+            {
+                g.Rect(x, y, 16, 16, H("#4a3426"));
+                for (int k = 0; k < 16; k += 4) g.Rect(x, y + k, 16, 1, H("#2e2018"));
+                for (int i = 0; i < 20; i++) g.Rect(x + r.Next(16), y + r.Next(16), 2, 1, H("#5a4232"));
+            });
+            Cell(5, (x, y) =>                  // tejas kawara
+            {
+                g.Rect(x, y, 16, 16, H("#3c4250"));
+                for (int k = 0; k < 16; k += 4) g.Rect(x, y + k, 16, 1, H("#262a34"));
+                for (int k = 0; k < 16; k += 3) g.Rect(x + k, y, 1, 16, H("#323844"));
+            });
+            void Window(int c, string glass, bool lit)
+            {
+                Cell(c, (x, y) =>
+                {
+                    g.Rect(x, y, 16, 16, H("#5a5a58"));
+                    g.Rect(x + 1, y + 1, 14, 14, H(glass));
+                    g.Rect(x + 7, y + 1, 2, 14, H("#5a5a58"));
+                    if (lit) g.Rect(x + 1, y + 1, 14, 4, H("#ffe2a8")); // cortina iluminada
+                });
+                if (lit) Glow(c, 1.1f);
+            }
+            Window(6, "#f4c070", true);         // ventana encendida
+            Window(7, "#1c2230", false);        // ventana apagada
+            Cell(8, (x, y) =>                  // persiana metálica
+            {
+                g.Rect(x, y, 16, 16, H("#8a8e94"));
+                for (int k = 0; k < 16; k += 2) g.Rect(x, y + k, 16, 1, H("#6c7076"));
+            });
+            Plain(9, "#eeeeea", "#e2e2de");   // konbini fachada
+            Cell(10, (x, y) =>                 // konbini franjas
+            {
+                g.Rect(x, y, 16, 6, H("#1e8a4a"));
+                g.Rect(x, y + 6, 16, 4, H("#f08a1e"));
+                g.Rect(x, y + 10, 16, 6, H("#2a5ab0"));
+            });
+            Cell(11, (x, y) =>                 // konbini cristal con estanterías dentro
+            {
+                g.Rect(x, y, 16, 16, H("#e8f2ff"));
+                for (int k = 3; k < 16; k += 4) g.Rect(x + 1, y + k, 14, 1, H("#9aa6b8"));
+                for (int i = 0; i < 18; i++) g.Rect(x + r.Next(15), y + r.Next(15), 1, 2, i % 2 == 0 ? H("#d05050") : H("#5080d0"));
+            });
+            Glow(11, 1.2f);
+            Plain(12, "#8c8c88", "#7a7a76");  // hormigón
+            Plain(13, "#2e3038", "#3a3c44");  // asfalto
+            Cell(14, (x, y) =>                 // acera de baldosas
+            {
+                g.Rect(x, y, 16, 16, H("#76726c"));
+                g.Rect(x, y + 7, 16, 1, H("#5e5a54"));
+                g.Rect(x + 7, y, 1, 16, H("#5e5a54"));
+            });
+            Plain(15, "#3a3c40", "#2c2e32");  // metal oscuro
+            Cell(16, (x, y) =>                 // noren azul con raya blanca
+            {
+                g.Rect(x, y, 16, 16, H("#1c2a5a"));
+                g.Rect(x + 3, y + 5, 10, 2, H("#e8e8e8"));
+                g.Rect(x + 7, y + 3, 2, 8, H("#e8e8e8"));
+            });
+            void Vending(int c, string body, string accent)
+            {
+                Cell(c, (x, y) =>
+                {
+                    g.Rect(x, y, 16, 16, H(body));
+                    g.Rect(x + 2, y + 2, 12, 7, H("#f4f4f0"));
+                    for (int i = 0; i < 6; i++) g.Rect(x + 3 + i * 2, y + 4, 1, 3, H(i % 2 == 0 ? accent : "#3080d0"));
+                    g.Rect(x + 4, y + 11, 8, 3, H("#202020"));
+                });
+                Glow(c, 1.0f);
+            }
+            Vending(17, "#c02828", "#f0d020");  // máquina roja
+            Vending(18, "#2858b0", "#f04040");  // máquina azul
+            Vending(19, "#f0f0ec", "#30a050");  // máquina blanca
+            Plain(20, "#c03030", "#d84040");  // cartel rojo
+            Glow(20, 0.9f);
+            Plain(21, "#2a52a0", "#3a62b0");  // cartel azul
+            Glow(21, 0.9f);
+            Plain(22, "#f6f6f0", "#ffffff");  // luz de marquesina
+            Glow(22, 1.4f);
+            Plain(23, "#1a2236", "#22304a");  // agua del arrozal
+            Glow(23, 0.18f);
+            Plain(24, "#3a4028", "#4a5032");  // caballón de tierra con hierba
+            Plain(25, "#4a3a2a", "#3a2c20");  // traviesa
+            Plain(26, "#a0a4aa", "#c0c4ca");  // carril
+            Cell(27, (x, y) =>                 // franjas amarillas y negras
+            {
+                for (int k = 0; k < 16; k += 4) { g.Rect(x, y + k, 16, 2, H("#e8c020")); g.Rect(x, y + k + 2, 16, 2, H("#181818")); }
+            });
+            Plain(28, "#202224", "#2a2c2e");  // carcasa de semáforo
+            Plain(29, "#5a4030", "#4a3424");  // puerta de madera
+            Cell(30, (x, y) =>                 // barandilla de balcón
+            {
+                g.Rect(x, y, 16, 16, H("#2a2c30"));
+                for (int k = 1; k < 16; k += 3) g.Rect(x + k, y, 1, 16, H("#9aa0a6"));
+                g.Rect(x, y, 16, 1, H("#9aa0a6"));
+            });
+            Cell(31, (x, y) =>                 // aire acondicionado exterior
+            {
+                g.Rect(x, y, 16, 16, H("#d8d8d2"));
+                for (int k = 3; k < 13; k += 2) g.Rect(x + 3, y + k, 8, 1, H("#8a8a86"));
+            });
+            Cell(32, (x, y) =>                 // cabina de teléfono: cristal verde iluminado
+            {
+                g.Rect(x, y, 16, 16, H("#2a8a4a"));
+                g.Rect(x + 2, y + 2, 12, 12, H("#c8f0d8"));
+            });
+            Glow(32, 0.9f);
+            Plain(33, "#1c2c1c", "#243624");  // cedro
+            Plain(34, "#2c2018", "#3a2a20");  // tronco
+            Plain(35, "#5a5850", "#4a4840");  // grava de la vía
+            Plain(36, "#e8e8e0", "#ffffff");  // pintura blanca
+            Cell(37, (x, y) =>                 // tablero de madera clara del cartel
+            {
+                g.Rect(x, y, 16, 16, H("#8a6a40"));
+                g.Rect(x, y, 16, 1, H("#5a4028")); g.Rect(x, y + 15, 16, 1, H("#5a4028"));
+            });
+            Plain(38, "#e04a2a", "#f06a3a");  // farolillo rojo (chōchin)
+            Glow(38, 1.2f);
+            Plain(39, "#ffd080", "#fff0c0");  // farola de calle
+            Glow(39, 1.4f);
+
+            emission = e.ToTexture("PuebloEmision", false, false);
+            return g.ToTexture("PuebloAtlas", false, false);
+        }
+
+        /// <summary>Fachada con ventanas para la ciudad media del valle: muro oscuro y ventanas encendidas al azar. Se repite.</summary>
+        public static Texture2D CityWindows()
+        {
+            var g = new Canvas(32, 32);
+            var r = new System.Random(23);
+            g.Fill(H("#0c0e16"));
+            for (int y = 2; y < 32; y += 4)
+                for (int x = 1; x < 32; x += 3)
+                {
+                    int roll = r.Next(10);
+                    var c = roll < 4 ? H("#ffcf7a") : roll < 5 ? H("#cfe4ff") : H("#151a26");
+                    g.Rect(x, y, 2, 2, c);
+                }
+            return g.ToTexture("VentanasCiudad");
         }
 
         // ---------- Señales (Fase 3) ----------
