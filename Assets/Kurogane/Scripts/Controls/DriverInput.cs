@@ -112,6 +112,10 @@ namespace Kurogane.Controls
         public static bool Pause => Pressed(Key.Escape, g => g.startButton) || Pressed(Key.P);
         public static bool Confirm => Pressed(Key.Enter, g => g.buttonSouth);
         public static bool NextCar => Pressed(Key.Tab, g => g.selectButton);
+        public static bool MenuUp => Pressed(Key.UpArrow, g => g.dpad.up) || Pressed(Key.W);
+        public static bool MenuDown => Pressed(Key.DownArrow, g => g.dpad.down) || Pressed(Key.S);
+        public static bool MenuLeft => Pressed(Key.LeftArrow, g => g.dpad.left) || Pressed(Key.A);
+        public static bool MenuRight => Pressed(Key.RightArrow, g => g.dpad.right) || Pressed(Key.D);
 #elif ENABLE_LEGACY_INPUT_MANAGER
         public static bool ShiftUp => UnityEngine.Input.GetKeyDown(KeyCode.E);
         public static bool ShiftDown => UnityEngine.Input.GetKeyDown(KeyCode.Q);
@@ -120,6 +124,10 @@ namespace Kurogane.Controls
         public static bool Pause => UnityEngine.Input.GetKeyDown(KeyCode.Escape) || UnityEngine.Input.GetKeyDown(KeyCode.P);
         public static bool Confirm => UnityEngine.Input.GetKeyDown(KeyCode.Return);
         public static bool NextCar => UnityEngine.Input.GetKeyDown(KeyCode.Tab);
+        public static bool MenuUp => UnityEngine.Input.GetKeyDown(KeyCode.UpArrow) || UnityEngine.Input.GetKeyDown(KeyCode.W);
+        public static bool MenuDown => UnityEngine.Input.GetKeyDown(KeyCode.DownArrow) || UnityEngine.Input.GetKeyDown(KeyCode.S);
+        public static bool MenuLeft => UnityEngine.Input.GetKeyDown(KeyCode.LeftArrow) || UnityEngine.Input.GetKeyDown(KeyCode.A);
+        public static bool MenuRight => UnityEngine.Input.GetKeyDown(KeyCode.RightArrow) || UnityEngine.Input.GetKeyDown(KeyCode.D);
 #else
         public static bool ShiftUp => false;
         public static bool ShiftDown => false;
@@ -128,6 +136,10 @@ namespace Kurogane.Controls
         public static bool Pause => false;
         public static bool Confirm => false;
         public static bool NextCar => false;
+        public static bool MenuUp => false;
+        public static bool MenuDown => false;
+        public static bool MenuLeft => false;
+        public static bool MenuRight => false;
 #endif
     }
 }
